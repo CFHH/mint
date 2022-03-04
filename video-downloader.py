@@ -29,9 +29,10 @@ from functools import partial
 SOURCE_URL = 'https://aistdancedb.ongaaccel.jp/v1.0.0/video/10M/'
 LIST_URL = 'https://storage.googleapis.com/aist_plusplus_public/20121228/video_list.txt'
 
-def _download(video_url, download_folder):
+def _download(video_url, download_folder, storage_folder):
   save_path = os.path.join(download_folder, os.path.basename(video_url))
-  if not os.path.exists(save_path)
+  storage_path = os.path.join(storage_folder, os.path.basename(video_url))
+  if not os.path.exists(save_path) and not os.path.exists(storage_path):
     urllib.request.urlretrieve(video_url, save_path)
 
 if __name__ == '__main__':
@@ -42,6 +43,11 @@ if __name__ == '__main__':
       type=str,
       required=True,
       help='where to store AIST++ videos.')
+  parser.add_argument(
+      '--storage_folder',
+      type=str,
+      required=True,
+      help='if exist, not downlad')
   parser.add_argument(
       '--num_processes',
       type=int,
@@ -70,7 +76,7 @@ if __name__ == '__main__':
   video_urls = [
       os.path.join(SOURCE_URL, seq_name + '.mp4') for seq_name in seq_names]
 
-  download_func = partial(_download, download_folder=args.download_folder)
+  download_func = partial(_download, download_folder=args.download_folder, storage_folder=args.storage_folder)
   pool = multiprocessing.Pool(processes=args.num_processes)
   for i, _ in enumerate(pool.imap_unordered(download_func, video_urls)):
     sys.stderr.write('\rdownloading %d / %d' % (i + 1, len(video_urls)))
