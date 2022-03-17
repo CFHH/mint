@@ -23,8 +23,8 @@ from mint.utils import config_util
 from third_party.tf_models import orbit
 import tensorflow as tf
 
-import os
-os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
+#import os
+#os.environ['CUDA_VISIBLE_DEVICES'] = "-1"  #cpu
 
 TRAIN_STRATEGY = ['tpu', 'gpu']
 
