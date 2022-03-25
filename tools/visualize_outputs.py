@@ -1,4 +1,5 @@
 import vedo
+import trimesh
 import torch
 import time
 import numpy as np
@@ -52,11 +53,14 @@ def visualize(motion, smpl_model):
     smpl_poses, smpl_trans = recover_to_axis_angles(motion)
     smpl_poses = np.squeeze(smpl_poses, axis=0)  # (seq_len, 24, 3)
     smpl_trans = np.squeeze(smpl_trans, axis=0)  # (seq_len, 3)
-    keypoints3d = smpl_model.forward(
+
+    smpl_output = smpl_model.forward(
         global_orient=torch.from_numpy(smpl_poses[:, 0:1]).float(),
         body_pose=torch.from_numpy(smpl_poses[:, 1:]).float(),
         transl=torch.from_numpy(smpl_trans).float(),
-    ).joints.detach().numpy()   # (seq_len, 24, 3)
+    )
+    keypoints3d = smpl_output.joints.detach().numpy()   # (seq_len, 24, 3)
+    vertices = smpl_output.vertices.detach().numpy()
 
     bbox_center = (
         keypoints3d.reshape(-1, 3).max(axis=0)
@@ -68,11 +72,20 @@ def visualize(motion, smpl_model):
     )
     world = vedo.Box(bbox_center, bbox_size[0], bbox_size[1], bbox_size[2]).wireframe()
     vedo.show(world, axes=True, viewup="y", interactive=0)
-    for kpts in keypoints3d:
-        pts = vedo.Points(kpts).c("red")
-        plotter = vedo.show(world, pts)
-        if plotter.escaped: break  # if ESC
+
+    i = 0
+    while i < keypoints3d.shape[0]:
+        keypoints3d_i = keypoints3d[i]
+        vertices_i = vertices[i]
+        i += 1
+        mesh = trimesh.Trimesh(vertices_i, smpl_model.faces)
+        mesh.visual.face_colors = [200, 200, 250, 100]
+        pts = vedo.Points(keypoints3d_i, r=20)
+        plotter = vedo.show(world, mesh, interactive=0)
+        if plotter.escaped:
+            break  # if ESC
         time.sleep(0.01)
+
     vedo.interactive().close()
 
 
@@ -83,7 +96,7 @@ if __name__ == "__main__":
     import tqdm
     from smplx import SMPL
 
-    smpl = SMPL(model_path="/mnt/data/smpl/", gender='MALE', batch_size=1)
-    result_file = "outputs/gBR_sBM_c01_d04_mBR0_ch01_mBR0.npy"
+    smpl = SMPL(model_path="/home/ubuntuai/mint/others/smpl/", gender='MALE', batch_size=1)
+    result_file = "outputs/gPO_sBM_c01_d11_mPO1_ch02_mPO1.npy"
     result_motion = np.load(result_file)[None, ...]  # [1, 120 + 1200, 225]
     visualize(result_motion, smpl)
