@@ -84,19 +84,37 @@ class FACTModel(multi_modal_model.MultiModalModel):
       [batch_size, motion_seq_length + audio_seq_length, motion_feature_dimension]
       will be return. **Be aware only the first N-frames are supervised during training**
     """
+    #
     # Computes motion features.
+    #
+    # inputs["motion_input"].shape = [batch_size, motion_seq_length = 120, motion_feature_dim = 225]
     motion_features = self.motion_linear_embedding(inputs["motion_input"])
-    # `motion_features` shape = [batch_size, seq_length, hidden_size].
+    # motion_features.shape = [batch_size, motion_seq_length = 120, motion_hidden_size = 800]
+
     motion_features = self.motion_pos_embedding(motion_features)
+    # motion_features.shape = [batch_size, motion_seq_length = 120, motion_hidden_size = 800]
+
     motion_features = self.motion_transformer(motion_features)
+    # motion_features.shape = [batch_size, motion_seq_length = 120, motion_hidden_size = 800]
 
+    #
     # Computes audio features.
+    #
+    # inputs["audio_input"].shape = [batch_size, audio_seq_length = 240, audio_feature_dim = 35]
     audio_features = self.audio_linear_embedding(inputs["audio_input"])
-    audio_features = self.audio_pos_embedding(audio_features)
-    audio_features = self.audio_transformer(audio_features)
+    # audio_features.shape = [batch_size, audio_seq_length = 240, audio_hidden_size = 800]
 
+    audio_features = self.audio_pos_embedding(audio_features)
+    # audio_features.shape = [batch_size, audio_seq_length = 240, audio_hidden_size = 800]
+
+    audio_features = self.audio_transformer(audio_features)
+    # audio_features.shape = [batch_size, audio_seq_length = 240, audio_hidden_size = 800]
+
+    #
     # Computes cross modal output.
+    #
     output = self.cross_modal_layer(motion_features, audio_features)
+    # output.shape = [batch_size, motion_seq_length + audio_seq_length = 360, motion_feature_dim = 225]
 
     return output
 

@@ -181,22 +181,27 @@ class CrossModalLayer(tf.keras.layers.Layer):
 
   def call(self, modal_a_sequences, modal_b_sequences):
     """Get loss for the cross-modal tasks."""
+    # modal_a_sequences: motion_features.shape = [batch_size, motion_seq_length = 120, motion_hidden_size = 800]
+    # modal_b_sequences: audio_features.shape = [batch_size, audio_seq_length = 240, audio_hidden_size = 800]
     _, _, modal_a_width = base_model_util.get_shape_list(modal_a_sequences)
     _, _, modal_b_width = base_model_util.get_shape_list(modal_b_sequences)
     if modal_a_width != modal_b_width:
       raise ValueError(
           "The modal_a hidden size (%d) should be the same with the modal_b "
           "hidden size (%d)" % (modal_a_width, modal_b_width))
+
     if self.config.cross_modal_concat_dim == model_pb2.CrossModalModel.CrossModalConcatDim.SEQUENCE_WISE:
-      # [batch_size, modal_a_seq_len + modal_b_seq_len, width]
       merged_sequences = tf.concat([modal_a_sequences, modal_b_sequences],
                                    axis=1)
+      # merged_sequences = [batch_size, modal_a_seq_len + modal_b_seq_len = 360, width = 800]
     else:
       raise NotImplementedError("cross_modal_concat_dim %s is not supported." %
                                 self.config.cross_modal_concat_dim)
 
-    # [batch_size, modal_a_seq_len + modal_b_seq_len, width]
     merged_sequences = self.transformer_layer(merged_sequences)
+    # merged_sequences.shape = [batch_size, modal_a_seq_len + modal_b_seq_len = 360, hidden_size = 800]
+
     logits = self.cross_output_layer(merged_sequences)
+    # logits.shape = [batch_size, modal_a_seq_len + modal_b_seq_len = 360, output_layer_config.out_dim = motion_feature_dim = 225]
 
     return logits
