@@ -37,50 +37,53 @@ class FACTModel(multi_modal_model.MultiModalModel):
     super().__init__(is_training)
     self.config = copy.deepcopy(config)
     self.is_training = is_training
+
     (self.feature_to_model, self.feature_to_params, self.feature_to_preprocessor
     ) = multi_modal_model_util.build_modalities_model(self.config.modality)
 
     self.cross_modal_layer = base_models.CrossModalLayer(
         self.config.cross_modal_model, is_training=self.is_training)
+
     motion_transformer_config = self.feature_to_model["motion"][
         "transformer_layer"]
+    self.motion_transformer = base_models.Transformer(
+        hidden_size=motion_transformer_config.hidden_size,                  #800
+        num_hidden_layers=motion_transformer_config.num_hidden_layers,      #2
+        num_attention_heads=motion_transformer_config.num_attention_heads,  #10
+        intermediate_size=motion_transformer_config.intermediate_size,      #3072
+        initializer_range=motion_transformer_config.initializer_range)      #0.02
+    self.motion_pos_embedding = base_models.PositionEmbedding(
+        self.feature_to_params["motion"]["sequence_length"],                #120
+        motion_transformer_config.hidden_size)                              #800
+    self.motion_linear_embedding = base_models.LinearEmbedding(
+        motion_transformer_config.hidden_size)                              #800
+
     audio_transformer_config = self.feature_to_model["audio"][
         "transformer_layer"]
-    self.motion_transformer = base_models.Transformer(
-        hidden_size=motion_transformer_config.hidden_size,
-        num_hidden_layers=motion_transformer_config.num_hidden_layers,
-        num_attention_heads=motion_transformer_config.num_attention_heads,
-        intermediate_size=motion_transformer_config.intermediate_size,
-        initializer_range=motion_transformer_config.initializer_range)
-    self.motion_pos_embedding = base_models.PositionEmbedding(
-        self.feature_to_params["motion"]["sequence_length"],
-        motion_transformer_config.hidden_size)
-    self.motion_linear_embedding = base_models.LinearEmbedding(
-        motion_transformer_config.hidden_size)
     self.audio_transformer = base_models.Transformer(
-        hidden_size=audio_transformer_config.hidden_size,
-        num_hidden_layers=audio_transformer_config.num_hidden_layers,
-        num_attention_heads=audio_transformer_config.num_attention_heads,
-        intermediate_size=audio_transformer_config.intermediate_size,
-        initializer_range=audio_transformer_config.initializer_range)
+        hidden_size=audio_transformer_config.hidden_size,                   #800
+        num_hidden_layers=audio_transformer_config.num_hidden_layers,       #2
+        num_attention_heads=audio_transformer_config.num_attention_heads,   #10
+        intermediate_size=audio_transformer_config.intermediate_size,       #3072
+        initializer_range=audio_transformer_config.initializer_range)       #0.02
     self.audio_pos_embedding = base_models.PositionEmbedding(
-        self.feature_to_params["audio"]["sequence_length"],
-        audio_transformer_config.hidden_size)
+        self.feature_to_params["audio"]["sequence_length"],                 #240
+        audio_transformer_config.hidden_size)                               #800
     self.audio_linear_embedding = base_models.LinearEmbedding(
-        audio_transformer_config.hidden_size)
+        audio_transformer_config.hidden_size)                               #800
 
   def call(self, inputs):
-    """Predict sequences from inputs. 
+    """Predict sequences from inputs.
 
-    This is a single forward pass that been used during training. 
+    This is a single forward pass that been used during training.
 
     Args:
-      inputs: Input dict of tensors. The dict should contains 
+      inputs: Input dict of tensors. The dict should contains
         `motion_input` ([batch_size, motion_seq_length, motion_feature_dimension]) and
         `audio_input` ([batch_size, audio_seq_length, audio_feature_dimension]).
 
     Returns:
-      Final output after the cross modal transformer. A tensor with shape 
+      Final output after the cross modal transformer. A tensor with shape
       [batch_size, motion_seq_length + audio_seq_length, motion_feature_dimension]
       will be return. **Be aware only the first N-frames are supervised during training**
     """
@@ -119,19 +122,19 @@ class FACTModel(multi_modal_model.MultiModalModel):
     return output
 
   def infer_auto_regressive(self, inputs, steps=1200):
-    """Predict sequences from inputs in an auto-regressive manner. 
+    """Predict sequences from inputs in an auto-regressive manner.
 
-    This function should be used only during inference. During each forward step, 
+    This function should be used only during inference. During each forward step,
     only the first frame was kept. Inputs are shifted by 1 frame after each forward.
 
 
     Args:
-      inputs: Input dict of tensors. The dict should contains 
+      inputs: Input dict of tensors. The dict should contains
         `motion_input` ([batch_size, motion_seq_length, motion_feature_dimension]) and
         `audio_input` ([batch_size, audio_seq_length, audio_feature_dimension]).
 
     Returns:
-      Final output after the auto-regressive inference. A tensor with shape 
+      Final output after the auto-regressive inference. A tensor with shape
       [batch_size, steps, motion_feature_dimension]
       will be return.
     """
@@ -148,7 +151,7 @@ class FACTModel(multi_modal_model.MultiModalModel):
       # update motion input
       motion_input = tf.concat([motion_input[:, 1:, :], output], axis=1)
     return tf.concat(outputs, axis=1)
-      
+
   def loss(self, target, pred):
     motion_generation_loss = self.compute_motion_generation_loss(pred, target)
     return motion_generation_loss

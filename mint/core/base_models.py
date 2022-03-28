@@ -166,18 +166,18 @@ class CrossModalLayer(tf.keras.layers.Layer):
     self.model_type = self.config.WhichOneof("model")
     model_config = self.config.transformer
     self.transformer_layer = Transformer(
-        hidden_size=model_config.hidden_size,
-        num_hidden_layers=model_config.num_hidden_layers,
-        num_attention_heads=model_config.num_attention_heads,
-        intermediate_size=model_config.intermediate_size,
-        initializer_range=model_config.initializer_range)
+        hidden_size=model_config.hidden_size,                   #800
+        num_hidden_layers=model_config.num_hidden_layers,       #12
+        num_attention_heads=model_config.num_attention_heads,   #10
+        intermediate_size=model_config.intermediate_size,       #3072
+        initializer_range=model_config.initializer_range)       #0.02
 
     output_layer_config = self.config.output_layer
     self.cross_output_layer = tf.keras.layers.Dense(
-        units=output_layer_config.out_dim,
+        units=output_layer_config.out_dim,                      #225
         activation=None,
         kernel_initializer=base_model_util.create_initializer(
-            output_layer_config.initializer_range))
+            output_layer_config.initializer_range))             #0.02
 
   def call(self, modal_a_sequences, modal_b_sequences):
     """Get loss for the cross-modal tasks."""
