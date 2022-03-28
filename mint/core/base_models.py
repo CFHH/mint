@@ -72,19 +72,19 @@ class Attention(tf.keras.Model):
         "b n (qkv h d) -> qkv b h n d", qkv=3, h=self.heads)
     self.rearrange_out = Rearrange("b h n d -> b n (h d)")
 
-  def call(self, x):
-    qkv = self.to_qkv(x)
-    qkv = self.rearrange_qkv(qkv)
-    q = qkv[0]
-    k = qkv[1]
-    v = qkv[2]
+  def call(self, x):              # 以motion为例，x.shape = [batch_size, 120, 800]
+    qkv = self.to_qkv(x)          # qkv.shape = [batch_size, 120, 2400]
+    qkv = self.rearrange_qkv(qkv) # qkv.shape = [3, batch_size, 10, 120, 80], {"b n (qkv h d) -> qkv b h n d", qkv=3, h=10, 2400 = qkv * h * d, d = 80}
+    q = qkv[0]                    # q.shape = [batch_size, 10, 120, 80]
+    k = qkv[1]                    # k.shape = [batch_size, 10, 120, 80]
+    v = qkv[2]                    # v.shape = [batch_size, 10, 120, 80]
 
-    dots = tf.einsum("bhid,bhjd->bhij", q, k) * self.scale
-    attn = tf.nn.softmax(dots, axis=-1)
+    dots = tf.einsum("bhid,bhjd->bhij", q, k) * self.scale # dots.shape = [batch_size, 10, 120, 120], {id,jd -> ij: 120*80, 120*80 -> 120*120}, self.scale = 1 /(√800)
+    attn = tf.nn.softmax(dots, axis=-1)                    # attn.shape = [batch_size, 10, 120, 120]
 
-    out = tf.einsum("bhij,bhjd->bhid", attn, v)
-    out = self.rearrange_out(out)
-    out = self.to_out(out)
+    out = tf.einsum("bhij,bhjd->bhid", attn, v) # out.shape = [batch_size, 10, 120, 80], {ij,jd -> id: 120*120, 120*80 -> 120*80}
+    out = self.rearrange_out(out)               # out.shape = [batch_size, 120, 800], {"b h n d -> b n (h d)", h=10, d=80}
+    out = self.to_out(out)                      # out.shape = [batch_size, 120, 800], 与输入x相同
     return out
 
 
@@ -101,7 +101,7 @@ class Transformer(tf.keras.Model):
     blocks = []
     for _ in range(num_hidden_layers):
       blocks.extend([
-          Residual(Norm(Attention(hidden_size, heads=num_attention_heads))),
+          Residual(Norm(Attention(hidden_size, heads=num_attention_heads))), # 为什么Attention的实际调用次数是num_hidden_layers的两倍？
           Residual(Norm(MLP(hidden_size, intermediate_size)))
       ])
     self.net = tf.keras.Sequential(blocks)
