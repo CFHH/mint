@@ -84,7 +84,7 @@ def visualize(motion, smpl_model):
         plotter = vedo.show(world, mesh, interactive=0)
         if plotter.escaped:
             break  # if ESC
-        time.sleep(0.01)
+        time.sleep(0.005)
 
     vedo.interactive().close()
 
@@ -97,6 +97,10 @@ if __name__ == "__main__":
     from smplx import SMPL
 
     smpl = SMPL(model_path="/home/ubuntuai/mint/others/smpl/", gender='MALE', batch_size=1)
-    result_file = "outputs/gPO_sBM_c01_d11_mPO1_ch02_mPO1.npy"
-    result_motion = np.load(result_file)[None, ...]  # [1, 120 + 1200, 225]
-    visualize(result_motion, smpl)
+
+    result_files = glob.glob("outputs/*.npy")
+    for result_file in tqdm.tqdm(result_files):
+        #result_file = "outputs/gBR_sBM_c01_d04_mBR0_ch01_mBR0.npy"
+        print("Visual %s" % (result_file))
+        result_motion = np.load(result_file)[None, ...]  # [1, 120 + 1200, 225]
+        visualize(result_motion, smpl)
