@@ -14,19 +14,19 @@ import tensorflow as tf
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string(
-    'anno_dir', '/mnt/data/aist_plusplus_final/', 
+    'anno_dir', 'I:/mint/data/aist_plusplus_final',
     'Path to the AIST++ annotation files.')
 flags.DEFINE_string(
-    'audio_dir', '/mnt/data/AIST/music/', 
+    'audio_dir', 'D:/mint-music/',
     'Path to the AIST wav files.')
 flags.DEFINE_string(
-    'audio_cache_dir', '/tmp/aist_audio_feats/', 
+    'audio_cache_dir', 'I:/mint/tmp/aist_audio_feats',
     'Path to cache dictionary for audio features.')
 flags.DEFINE_enum(
     'split', 'train', ['train', 'testval'],
     'Whether do training set or testval set.')
 flags.DEFINE_string(
-    'tfrecord_path', './data/aist_tfrecord', 
+    'tfrecord_path', 'I:/mint/data/tmp',
     'Output path for the tfrecord files.')
 
 RNG = np.random.RandomState(42)

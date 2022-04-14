@@ -107,6 +107,7 @@ data/
 checkpoints/
 checkpoints-tmp/
 outputs/
+outputs-tmp/
 
 .DS_Store
 

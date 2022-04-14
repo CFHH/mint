@@ -106,7 +106,7 @@ def create_input(train_eval_config,
               is_training=is_training),
           num_parallel_calls=num_cpu_threads)
 
-  if dataset_config.data_target_field:
+  if dataset_config.data_target_field: # 这里不执行
     ds = ds.map(
         functools.partial(
             inputs_util.preprocess_labels, dataset_config=dataset_config),

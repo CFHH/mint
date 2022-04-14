@@ -153,6 +153,8 @@ class FACTModel(multi_modal_model.MultiModalModel):
     return tf.concat(outputs, axis=1)
 
   def loss(self, target, pred):
+    # target.shape = [batch_size, 20, 225]
+    # pred.shape = [batch_size, 360, 225]
     motion_generation_loss = self.compute_motion_generation_loss(pred, target)
     return motion_generation_loss
 
@@ -164,6 +166,6 @@ class FACTModel(multi_modal_model.MultiModalModel):
   def compute_motion_generation_loss(self, pred_tensors, target_tensors):
     """Compute motion generation loss from layer output."""
     _, target_seq_len, _ = base_model_util.get_shape_list(target_tensors)
-    diff = target_tensors - pred_tensors[:, :target_seq_len]
-    l2_loss = tf.reduce_mean(tf.square(diff))
+    diff = target_tensors - pred_tensors[:, :target_seq_len] # 取开头的20帧
+    l2_loss = tf.reduce_mean(tf.square(diff)) # 平方后取平均值
     return l2_loss

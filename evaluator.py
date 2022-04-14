@@ -27,11 +27,11 @@ import tensorflow as tf
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('model_dir', None,
+flags.DEFINE_string('model_dir', './checkpoints',
                     'Directory to write training checkpoints and logs')
-flags.DEFINE_string('config_path', None, 'Path to the config file.')
+flags.DEFINE_string('config_path', './configs/fact_v5_deeper_t10_cm12.config', 'Path to the config file.')
 flags.DEFINE_string('eval_prefix', 'valid', 'Prefix for evaluation summaries.')
-flags.DEFINE_string('output_dir', 'outputs', 'Where to save the results.')
+flags.DEFINE_string('output_dir', 'outputs-tmp', 'Where to save the results.')
 
 # Unused flags to play nice with xm hyperparameter sweep. Add all flags under
 # hyperparameter sweep in trainer.py here.
@@ -53,7 +53,7 @@ def evaluate():
       is_training=False,
       use_tpu=False)
 
-  model_ = model_builder.build(model_config, True)
+  model_ = model_builder.build(model_config, True) # True = is_training, 实际并无用处
   model_.global_step = tf.Variable(initial_value=0, dtype=tf.int64)
   metrics_ = model_.get_metrics(eval_config)
   evaluator = single_task_evaluator.SingleTaskEvaluator(

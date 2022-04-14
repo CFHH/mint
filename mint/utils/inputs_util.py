@@ -68,6 +68,7 @@ def fact_preprocessing(example, modality_to_params, is_training):
   audio_dim = modality_to_params["audio"]["feature_dim"]
 
   # Pad the input motion translation from 3-dim to 9-dim.
+  # 把平移数据从3个数字扩展成矩阵
   motion_dim += 6
   example["motion_sequence"] = tf.pad(example["motion_sequence"],
                                       [[0, 0], [6, 0]])
@@ -81,7 +82,7 @@ def fact_preprocessing(example, modality_to_params, is_training):
                               motion_seq_length - windows_size + 1,
                               dtype=tf.int32)
   else:
-    start = 0
+    start = 0 #eval时根据最初的 120 帧来生成
 
   # motion input: [start, start + motion_input_length)
   example["motion_input"] = example["motion_sequence"][start:start +
@@ -94,6 +95,7 @@ def fact_preprocessing(example, modality_to_params, is_training):
                                                    motion_target_shift +
                                                    motion_target_length, :]
     example["target"].set_shape([motion_target_length, motion_dim])
+  # eval时不需要"target"
   del example["motion_sequence"]
 
   if is_training:
@@ -102,7 +104,7 @@ def fact_preprocessing(example, modality_to_params, is_training):
                                                       audio_input_length, :]
     example["audio_input"].set_shape([audio_input_length, audio_dim])
   else:
-    example["audio_input"] = example["audio_sequence"]
+    example["audio_input"] = example["audio_sequence"] # eval时，保留所有帧的audio信息
   del example["audio_sequence"]
   return example
 

@@ -23,8 +23,8 @@ from mint.utils import config_util
 from third_party.tf_models import orbit
 import tensorflow as tf
 
-#import os
-#os.environ['CUDA_VISIBLE_DEVICES'] = "-1"  #cpu
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = "-1"  #cpu
 
 TRAIN_STRATEGY = ['tpu', 'gpu']
 
@@ -32,8 +32,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_enum('train_strategy', TRAIN_STRATEGY[1], TRAIN_STRATEGY,
                   'Whether to train with TPUs or Mirrored GPUs.')
 flags.DEFINE_string('master', None, 'BNS name of the TensorFlow tpu to use.')
-flags.DEFINE_string('config_path', None, 'Path to the config file.')
-flags.DEFINE_string('model_dir', None,
+flags.DEFINE_string('config_path', './configs/fact_v5_deeper_t10_cm12.config', 'Path to the config file.')
+flags.DEFINE_string('model_dir', './checkpoints-tmp',
                     'Directory to write training checkpoints and logs')
 flags.DEFINE_float('initial_learning_rate', 0.1,
                    'Initial learning rate for cosine decay schedule')
@@ -149,14 +149,14 @@ def train():
   with strategy.scope():
     model_ = model_builder.build(model_config, True)
     lr_schedule = _create_learning_rate(train_config.learning_rate)
-    optimizer = tf.keras.optimizers.Adam(lr_schedule)
+    optimizer = tf.keras.optimizers.Adam(lr_schedule) # SGD
     model_.global_step = optimizer.iterations
     summaryfn = None
     if FLAGS.train_strategy == TRAIN_STRATEGY[1]:
       summaryfn = summary_fn
     trainer = single_task_trainer.SingleTaskTrainer(
         dataset,
-        label_key='target',
+        label_key='target', # 见inputs_util.py，example["target"]
         model=model_,
         loss_fn=model_.loss,
         optimizer=optimizer,
