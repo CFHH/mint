@@ -12,6 +12,7 @@ import tensorflow.keras.backend as K
 
 import inputs
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 class WGAN():
     def __init__(self):
@@ -178,7 +179,7 @@ class WGAN():
 
     def sample_motions(self, epoch):
         output_dir = './samples'
-        gen_num = 2
+        gen_num = 3
         noise = np.random.normal(0, 1, (gen_num, self.latent_dim))
         gen_motions = self.generator.predict(noise)
 
@@ -189,8 +190,8 @@ class WGAN():
 
     def save_model(self, epoch):
         def save(model, epoch, model_name):
-            model_path = "./saved_model/%d_%s.json" % (epoch, model_name)
-            weights_path = "./saved_model/%d_%s_weights.hdf5" % (epoch, model_name)
+            model_path = "./model/%d_%s.json" % (epoch, model_name)
+            weights_path = "./model/%d_%s_weights.hdf5" % (epoch, model_name)
             json_string = model.to_json()
             open(model_path, 'w').write(json_string)
             model.save_weights(weights_path)
@@ -200,4 +201,4 @@ class WGAN():
 
 if __name__ == '__main__':
     wgan = WGAN()
-    wgan.train(epochs=10000, batch_size=32, sample_interval=500)
+    wgan.train(epochs=1000000, batch_size=32, sample_interval=500)
