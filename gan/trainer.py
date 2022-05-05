@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow import keras
 import os
 import wgan_gp
+import dataset_loader
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('batch_size', 32, 'batch size')
@@ -75,6 +76,13 @@ def train():
     mode.fit(train_images, batch_size=FLAGS.batch_size, epochs=FLAGS.epochs, callbacks=[cbk])
 
 def main(_):
+    '''测试dataset
+    batch_size = 7
+    train_dataset = dataset_loader.load_dataset(batch_size, "../data/gan/gan_train_tfrecord-*")
+    train_iter = tf.nest.map_structure(iter, train_dataset)
+    data = next(train_iter)
+    print(data)
+    '''
     train()
 
 if __name__ == '__main__':
