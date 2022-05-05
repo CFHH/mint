@@ -11,7 +11,7 @@ import dataset_loader
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('batch_size', 32, 'batch size')
 flags.DEFINE_integer('noise_dim', 128, 'noise dim')
-flags.DEFINE_integer('epochs', 1000000, '迭代总次数')
+flags.DEFINE_integer('epochs', 99999999, '迭代总次数')
 flags.DEFINE_string('mode_dir', "./model", '保存模型的路径')
 flags.DEFINE_string('sample_dir', "./samples", '生成数据的路径')
 
