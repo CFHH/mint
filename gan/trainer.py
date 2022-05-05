@@ -66,14 +66,14 @@ def train():
         if finished_epochs % 100 == 0:
             print("---------- train epoch(%d) ----------" % finished_epochs)
 
-        if finished_epochs % 100000 == 0:
+        if finished_epochs % 50000 == 0:
             save_path = "%s/%08d" % (FLAGS.mode_dir, finished_epochs)
             model.save(finished_epochs, save_path)
-        elif finished_epochs % 10000 == 0:
+        elif finished_epochs % 5000 == 0:
             save_path = "%s/%s" % (FLAGS.mode_dir, "tmp")
             model.save(finished_epochs, save_path)
 
-        if finished_epochs % 10000 == 0:
+        if finished_epochs % 50000 == 0:
             sample_datas(model, finished_epochs, 5, FLAGS.noise_dim)
 
 
