@@ -51,7 +51,7 @@ def train():
     # 训练
     two_pi = math.pi * 2
     for epoch in range(model.start_epoch_index, FLAGS.epochs):
-        print("---------- train epoch(%d) ----------" % epoch)
+        #print("---------- train epoch(%d) ----------" % epoch)
         data = next(train_iter)
         real_data = data["motion_input"]              # (batch_size, 120, 72)
         real_data = np.expand_dims(real_data, axis=3) # (batch_size, 120, 72, 1)
@@ -63,6 +63,8 @@ def train():
         1000步，生成数据
         """
         finished_epochs = epoch + 1
+        if finished_epochs % 100 == 0:
+            print("---------- train epoch(%d) ----------" % finished_epochs)
 
         if finished_epochs % 10000 == 0:
             save_path = "%s/%08d" % (FLAGS.mode_dir, finished_epochs)
@@ -79,4 +81,5 @@ def main(_):
     train()
 
 if __name__ == '__main__':
+    # nohup python -u trainer.py > log_train.log 2>&1 &
     app.run(main)
