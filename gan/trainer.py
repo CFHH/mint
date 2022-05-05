@@ -58,22 +58,22 @@ def train():
         real_data = real_data / two_pi
         model.train_step(real_data)
         """
-        10000步，永久保存模型
-        1000步，临时保存模型
-        1000步，生成数据
+        10万步，永久保存模型
+        1万步，临时保存模型
+        1万步，生成数据
         """
         finished_epochs = epoch + 1
         if finished_epochs % 100 == 0:
             print("---------- train epoch(%d) ----------" % finished_epochs)
 
-        if finished_epochs % 10000 == 0:
+        if finished_epochs % 100000 == 0:
             save_path = "%s/%08d" % (FLAGS.mode_dir, finished_epochs)
             model.save(finished_epochs, save_path)
-        elif finished_epochs % 1000 == 0:
+        elif finished_epochs % 10000 == 0:
             save_path = "%s/%s" % (FLAGS.mode_dir, "tmp")
             model.save(finished_epochs, save_path)
 
-        if finished_epochs % 1000 == 0:
+        if finished_epochs % 10000 == 0:
             sample_datas(model, finished_epochs, 5, FLAGS.noise_dim)
 
 
