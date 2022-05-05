@@ -16,8 +16,8 @@ class WGAN_GP(keras.Model):
         self.d_steps = discriminator_extra_steps
         self.gp_weight = gp_weight
 
-        self.rows = 28
-        self.columns = 28
+        self.rows = 120
+        self.columns = 72
         self.channels = 1
         self.img_shape = (self.rows, self.columns, self.channels)
 
@@ -42,7 +42,7 @@ class WGAN_GP(keras.Model):
         if self.discriminator is None:
             print("########## Create discriminator ##########")
             self.discriminator = self.get_discriminator_model()
-            #self.discriminator.summary()
+            self.discriminator.summary()
 
         self.d_optimizer = keras.optimizers.Adam(
             learning_rate=0.0002, beta_1=0.5, beta_2=0.9
@@ -60,7 +60,7 @@ class WGAN_GP(keras.Model):
         if self.generator is None:
             print("########## Create generator ##########")
             self.generator = self.get_generator_model()
-            # self.generator.summary()
+            self.generator.summary()
 
         self.g_optimizer = keras.optimizers.Adam(
             learning_rate=0.0002, beta_1=0.5, beta_2=0.9
@@ -103,11 +103,12 @@ class WGAN_GP(keras.Model):
 
     def get_discriminator_model(self):
         img_input = layers.Input(shape=self.img_shape)
-        # (None, 28, 28, 1)
+        # (None, 120, 72, 1)
 
         # ZeroPadding2D(padding), padding = ((top_pad, bottom_pad), (left_pad, right_pad))
         # 这里是上下左右各填1个零变成(32, 32, 1)，(2, 2)=((1, 1), (1, 1))
-        x = layers.ZeroPadding2D((2, 2))(img_input)
+        ########## x = layers.ZeroPadding2D((2, 2))(img_input)
+        x = img_input #不手动补零了，Conv2D的padding自己会处理
         # ->(None, 32, 32, 1)
 
         x = self.conv_block(
@@ -210,13 +211,17 @@ class WGAN_GP(keras.Model):
         noise = layers.Input(shape=(self.latent_dim,))
         # (None, 128)
 
-        x = layers.Dense(4 * 4 * 256, use_bias=False)(noise)
+        d1 = int(self.rows / 8)    # 120 / 8 = 15
+        d2 = int(self.columns / 8) # 72 / 8 = 9
+
+        x = layers.Dense(d1 * d2 * 256, use_bias=False)(noise)
         # ->(None, 4096)
 
         x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU(0.2)(x)
-        x = layers.Reshape((4, 4, 256))(x)
+        x = layers.Reshape((d1, d2, 256))(x)
         # ->(None, 4, 4, 256)
+        ## 这里需要改成 ->(None, 15, 9, 256)
 
         x = self.upsample_block(
             x,
@@ -229,6 +234,7 @@ class WGAN_GP(keras.Model):
             use_dropout=False,
         )
         # ->(None, 8, 8, 256)->(None, 8, 8, 128)
+        ## 这里需要改成 ->(None, 30, 18, 256)->(None, 30, 18, 128)
 
         x = self.upsample_block(
             x,
@@ -241,6 +247,7 @@ class WGAN_GP(keras.Model):
             use_dropout=False,
         )
         # ->(None, 16, 16, 128)->(None, 16, 16, 64)
+        ## 这里需要改成 ->(None, 60, 36, 128)->(None, 60, 36, 64)
 
         x = self.upsample_block(
             x,
@@ -251,9 +258,10 @@ class WGAN_GP(keras.Model):
             use_bn=True
         )
         # ->(None, 32, 32, 64)->(None, 32, 32, 1)
+        ## 这里需要改成 ->(None, 120, 72, 64)->(None, 120, 72, 1)
 
         # 同ZeroPadding2D
-        x = layers.Cropping2D((2, 2))(x)
+        ########## x = layers.Cropping2D((2, 2))(x)
         # ->(None, 28, 28, 1)
 
         g_model = keras.models.Model(noise, x, name="generator")
@@ -294,7 +302,6 @@ class WGAN_GP(keras.Model):
         return gp
 
     def train_step(self, real_images):
-        print(real_images.shape)
         if isinstance(real_images, tuple):
             real_images = real_images[0]
 
@@ -407,25 +414,3 @@ class WGAN_GP(keras.Model):
                                 options=options,
                                 save_traces=save_traces)
 
-
-
-
-'''
-if __name__ == '__main__':
-    noise_dim = 128
-    batch_size = 32
-    epochs = 1000000
-
-    wgan_gp = WGAN_GP(latent_dim = noise_dim, discriminator_extra_steps=3)
-    wgan_gp.compile()
-
-    cbk = GanMonitor(num_img=3, latent_dim=noise_dim)
-
-    # TODO tf.DataSet
-    train_dataset = None
-
-    # TODO 改成不停的调用 wgan_gp.train_step() 或者能用orbit吗？
-    wgan_gp.fit(train_dataset, batch_size=batch_size, epochs=epochs, callbacks=[cbk])
-
-    # TODO 保存模型数据
-'''
