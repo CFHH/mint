@@ -37,11 +37,12 @@ def get_closest_rotmat(rotmats):
 
 
 def recover_to_axis_angles(motion):
-    seq_len, dim = motion.shape # motion.shape = (帧数, 75)
+    print(motion.shape)
+    batch_size, seq_len, dim = motion.shape # motion.shape = (1, 帧数, 75)
     assert dim == 75
-    transl = motion[,0:3]
-    axis_angles = motion[,3:]
-    axis_angles = axis_angles.reshape(seq_len, 24, 3)
+    transl = motion[:, :, 0:3]
+    axis_angles = motion[:, :, 3:]
+    axis_angles = axis_angles.reshape(batch_size, seq_len, 24, 3)
     return axis_angles, transl
 
 
