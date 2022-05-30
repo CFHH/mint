@@ -31,7 +31,7 @@ def sample_datas(model, finished_epochs, num_img, latent_dim):
     generated_datas = generated_datas * two_pi
     for i in range(num_img):
         file_data = generated_datas[i]
-        file_name = "gen_{epoch}_{i}.png".format(epoch=finished_epochs, i=i)
+        file_name = "gen_{epoch}_{i}".format(epoch=finished_epochs, i=i)
         save_path = os.path.join(FLAGS.sample_dir, file_name)
         np.save(save_path, file_data)
 
@@ -56,7 +56,7 @@ def train():
         real_data = data["motion_input"]              # (batch_size, 120, 72)
         real_data = np.expand_dims(real_data, axis=3) # (batch_size, 120, 72, 1)
         real_data = real_data / two_pi
-        model.train_step(real_data)
+        loss = model.train_step(real_data)
         """
         10万步，永久保存模型
         1万步，临时保存模型
@@ -64,7 +64,7 @@ def train():
         """
         finished_epochs = epoch + 1
         if finished_epochs % 100 == 0:
-            print("---------- train epoch(%d) ----------" % finished_epochs)
+            print("---------- train epoch(%d), discriminator loss is %f, generator loss is %f----------" % (finished_epochs, loss["d_loss"], loss["g_loss"]))
 
         if finished_epochs % 50000 == 0:
             save_path = "%s/%08d" % (FLAGS.mode_dir, finished_epochs)
