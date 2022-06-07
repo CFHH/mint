@@ -9,7 +9,7 @@ import wgan_gp
 import dataset_loader
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('batch_size', 32, 'batch size')
+flags.DEFINE_integer('batch_size', 8, 'batch size')
 flags.DEFINE_integer('noise_dim', 128, 'noise dim')
 flags.DEFINE_integer('epochs', 99999999, '迭代总次数')
 flags.DEFINE_string('mode_dir', "./model", '保存模型的路径')
@@ -45,7 +45,7 @@ def train():
     model.compile()
 
     # 加载数据集
-    train_dataset = dataset_loader.load_dataset(FLAGS.batch_size, "../data/gan/gan_train_tfrecord-*")
+    train_dataset = dataset_loader.load_dataset(FLAGS.batch_size, "../data/gan_with_trans/gan_train_tfrecord-*")
     train_iter = tf.nest.map_structure(iter, train_dataset)
 
     # 训练
@@ -66,14 +66,14 @@ def train():
         if finished_epochs % 100 == 0:
             print("---------- train epoch(%d), discriminator loss is %f, generator loss is %f----------" % (finished_epochs, loss["d_loss"], loss["g_loss"]))
 
-        if finished_epochs % 50000 == 0:
+        if finished_epochs % 5000 == 0:
             save_path = "%s/%08d" % (FLAGS.mode_dir, finished_epochs)
             model.save(finished_epochs, save_path)
-        elif finished_epochs % 5000 == 0:
+        elif finished_epochs % 1000 == 0:
             save_path = "%s/%s" % (FLAGS.mode_dir, "tmp")
             model.save(finished_epochs, save_path)
 
-        if finished_epochs % 50000 == 0:
+        if finished_epochs % 5000 == 0:
             sample_datas(model, finished_epochs, 5, FLAGS.noise_dim)
 
 

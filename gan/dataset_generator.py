@@ -26,7 +26,7 @@ flags.DEFINE_enum(
     'split', 'train', ['train', 'testval'],
     'Whether do training set or testval set.')
 flags.DEFINE_string(
-    'tfrecord_path', '../data/gan/gan_train_tfrecord',
+    'tfrecord_path', '../data/gan_with_trans/gan_train_tfrecord',
     'Output path for the tfrecord files.')
 
 RNG = np.random.RandomState(42)
@@ -152,32 +152,20 @@ def main(_):
     # load data
     dataset = AISTDataset(FLAGS.anno_dir)
     n_samples = len(seq_names)
-    rot_max = 0
-    rot_min = 0
     for i, seq_name in enumerate(seq_names):
         logging.info("processing %d / %d" % (i + 1, n_samples))
 
         smpl_poses, smpl_scaling, smpl_trans = AISTDataset.load_motion(dataset.motion_dir, seq_name)
-        cur_rot_max = smpl_poses.max()
-        cur_rot_min = smpl_poses.min()
-        if cur_rot_max > rot_max:
-            rot_max = cur_rot_max
-        if cur_rot_min < rot_min:
-            rot_min = cur_rot_min
-
         smpl_trans /= smpl_scaling
-        # 动作的平移先不考虑，动作的旋转用弧度表示(范围在-2pi到2pi之间)
+        # 动作的旋转用弧度表示(范围在-2pi到2pi之间)
         # from_rotvec：https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.from_rotvec.html
         #smpl_poses = R.from_rotvec(smpl_poses.reshape(-1, 3)).as_matrix().reshape(smpl_poses.shape[0], -1)
-        #smpl_motion = np.concatenate([smpl_trans, smpl_poses], axis=-1)
-        smpl_motion = smpl_poses
+        smpl_motion = np.concatenate([smpl_trans, smpl_poses], axis=-1)
 
         audio, audio_name = load_cached_audio_features(seq_name)
 
         tfexample = to_tfexample(smpl_motion, audio, seq_name, audio_name)
         write_tfexample(tfrecord_writers, tfexample)
-
-    print("########## rot_max = %f, rot_min = %f ##########" % (rot_max, rot_min))
 
     # If testval, also test on un-paired data
     if FLAGS.split == "testval":
@@ -188,8 +176,8 @@ def main(_):
             smpl_poses, smpl_scaling, smpl_trans = AISTDataset.load_motion(dataset.motion_dir, seq_name)
             smpl_trans /= smpl_scaling
             #smpl_poses = R.from_rotvec(smpl_poses.reshape(-1, 3)).as_matrix().reshape(smpl_poses.shape[0], -1)
-            #smpl_motion = np.concatenate([smpl_trans, smpl_poses], axis=-1)
-            smpl_motion = smpl_poses
+            smpl_motion = np.concatenate([smpl_trans, smpl_poses], axis=-1)
+
             audio, audio_name = load_cached_audio_features(random.choice(seq_names))
 
             tfexample = to_tfexample(smpl_motion, audio, seq_name, audio_name)

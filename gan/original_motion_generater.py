@@ -26,15 +26,12 @@ flags.DEFINE_enum(
     'split', 'train', ['train', 'testval'],
     'Whether do training set or testval set.')
 flags.DEFINE_string(
-    'tfrecord_path', '../data/gan/gan_train_tfrecord',
-    'Output path for the tfrecord files.')
-flags.DEFINE_string(
     'original_motion_data_path', '../data/original_motion_data/',
     'Output path for the tfrecord files.')
 
 
 def main(_):
-    os.makedirs(os.path.dirname(FLAGS.tfrecord_path), exist_ok=True)
+    os.makedirs(os.path.dirname(FLAGS.original_motion_data_path), exist_ok=True)
 
     # create list
     seq_names = []

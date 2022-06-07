@@ -16,8 +16,8 @@ class WGAN_GP(keras.Model):
         self.d_steps = discriminator_extra_steps
         self.gp_weight = gp_weight
 
-        self.rows = 120
-        self.columns = 72
+        self.rows = 600   # 10秒
+        self.columns = 75 # 24*3 +3
         self.channels = 1
         self.img_shape = (self.rows, self.columns, self.channels)
 
@@ -75,6 +75,22 @@ class WGAN_GP(keras.Model):
     def start_epoch_index(self, value):
         raise ValueError
 
+    def transform(self,
+                  x,
+                  units,
+                  activation,
+                  use_bias=True,
+                  use_bn=False,
+                  use_dropout=False,
+                  drop_value=0.2
+                  ):
+        x = layers.Dense(units, activation= activation, use_bias=use_bias)(x)
+        if use_bn:
+            x = layers.BatchNormalization()(x)
+        if use_dropout:
+            x = layers.Dropout(drop_value)(x)
+        return x
+
     # ---------------------
     #  Discriminator
     # ---------------------
@@ -96,78 +112,29 @@ class WGAN_GP(keras.Model):
         )(x)
         if use_bn:
             x = layers.BatchNormalization()(x)
-        x = activation(x)
+        if activation:
+            x = activation(x)
         if use_dropout:
             x = layers.Dropout(drop_value)(x)
         return x
 
     def get_discriminator_model(self):
         img_input = layers.Input(shape=self.img_shape)
-        # (None, 120, 72, 1)
+        # (None, 600, 75, 1)
 
-        # ZeroPadding2D(padding), padding = ((top_pad, bottom_pad), (left_pad, right_pad))
-        # 这里是上下左右各填1个零变成(32, 32, 1)，(2, 2)=((1, 1), (1, 1))
-        ########## x = layers.ZeroPadding2D((2, 2))(img_input)
-        x = img_input #不手动补零了，Conv2D的padding自己会处理
-        # ->(None, 32, 32, 1)
+        x = layers.Flatten()(img_input)
+        base_units = self.rows * self.columns * self.channels
 
-        x = self.conv_block(
-            x,
-            64,
-            kernel_size=(5, 5),
-            strides=(2, 2),
-            use_bn=False,
-            use_bias=True,
-            activation=layers.LeakyReLU(0.2),
-            use_dropout=False,
-            drop_value=0.3,
-        )
-        # ->(None, 16, 16, 64)
+        x = self.transform(x, int(base_units / 2), layers.LeakyReLU(0.2),
+                           use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
+        x = self.transform(x, int(base_units / 4), layers.LeakyReLU(0.2),
+                           use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
+        x = self.transform(x, int(base_units / 8), layers.LeakyReLU(0.2),
+                           use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
+        x = self.transform(x, int(base_units / 16), layers.LeakyReLU(0.2),
+                           use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
 
-        x = self.conv_block(
-            x,
-            128,
-            kernel_size=(5, 5),
-            strides=(2, 2),
-            use_bn=False,
-            activation=layers.LeakyReLU(0.2),
-            use_bias=True,
-            use_dropout=True,
-            drop_value=0.3,
-        )
-        # ->(None, 8, 8, 128)
-
-        x = self.conv_block(
-            x,
-            256,
-            kernel_size=(5, 5),
-            strides=(2, 2),
-            use_bn=False,
-            activation=layers.LeakyReLU(0.2),
-            use_bias=True,
-            use_dropout=True,
-            drop_value=0.3,
-        )
-        # ->(None, 4, 4, 256)
-
-        x = self.conv_block(
-            x,
-            512,
-            kernel_size=(5, 5),
-            strides=(2, 2),
-            use_bn=False,
-            activation=layers.LeakyReLU(0.2),
-            use_bias=True,
-            use_dropout=False,
-            drop_value=0.3,
-        )
-        # ->(None, 2, 2, 512)
-
-        x = layers.Flatten()(x)
-        # ->(None, 2048)
-        x = layers.Dropout(0.2)(x)
         x = layers.Dense(1)(x)
-        # ->(None, 1)
 
         d_model = keras.models.Model(img_input, x, name="discriminator")
         return d_model
@@ -211,58 +178,19 @@ class WGAN_GP(keras.Model):
         noise = layers.Input(shape=(self.latent_dim,))
         # (None, 128)
 
-        d1 = int(self.rows / 8)    # 120 / 8 = 15
-        d2 = int(self.columns / 8) # 72 / 8 = 9
+        base_units = self.rows * self.columns * self.channels
+        x = layers.Dense(base_units * 1, use_bias=False)(noise)
 
-        x = layers.Dense(d1 * d2 * 256, use_bias=False)(noise)
-        # ->(None, 4096)
+        x = self.transform(x, base_units * 1, layers.LeakyReLU(0.2),
+                           use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
+        x = self.transform(x, base_units * 1, layers.LeakyReLU(0.2),
+                           use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
+        x = self.transform(x, base_units * 1, layers.LeakyReLU(0.2),
+                           use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
+        x = self.transform(x, base_units, layers.LeakyReLU(0.2),
+                           use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
 
-        x = layers.BatchNormalization()(x)
-        x = layers.LeakyReLU(0.2)(x)
-        x = layers.Reshape((d1, d2, 256))(x)
-        # ->(None, 4, 4, 256)
-        ## 这里需要改成 ->(None, 15, 9, 256)
-
-        x = self.upsample_block(
-            x,
-            128,
-            layers.LeakyReLU(0.2),
-            strides=(1, 1),
-            use_bias=False,
-            use_bn=True,
-            padding="same",
-            use_dropout=False,
-        )
-        # ->(None, 8, 8, 256)->(None, 8, 8, 128)
-        ## 这里需要改成 ->(None, 30, 18, 256)->(None, 30, 18, 128)
-
-        x = self.upsample_block(
-            x,
-            64,
-            layers.LeakyReLU(0.2),
-            strides=(1, 1),
-            use_bias=False,
-            use_bn=True,
-            padding="same",
-            use_dropout=False,
-        )
-        # ->(None, 16, 16, 128)->(None, 16, 16, 64)
-        ## 这里需要改成 ->(None, 60, 36, 128)->(None, 60, 36, 64)
-
-        x = self.upsample_block(
-            x,
-            1,
-            layers.Activation("tanh"),
-            strides=(1, 1),
-            use_bias=False,
-            use_bn=True
-        )
-        # ->(None, 32, 32, 64)->(None, 32, 32, 1)
-        ## 这里需要改成 ->(None, 120, 72, 64)->(None, 120, 72, 1)
-
-        # 同ZeroPadding2D
-        ########## x = layers.Cropping2D((2, 2))(x)
-        # ->(None, 28, 28, 1)
+        x = layers.Reshape((self.rows, self.columns, self.channels))(x)
 
         g_model = keras.models.Model(noise, x, name="generator")
         return g_model
