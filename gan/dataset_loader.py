@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def load_dataset(batch_size, data_files, num_cpu_threads=2):
+def load_dataset(batch_size, motion_input_length, motion_dim, data_files, num_cpu_threads=2):
     #files = tf.io.gfile.glob("../data/gan_with_trans/gan_train_tfrecord-*")
 
     name_to_features = {}
@@ -22,9 +22,6 @@ def load_dataset(batch_size, data_files, num_cpu_threads=2):
         return example
 
     def randomly_cut(example):
-        motion_dim = 75           # 24个节点*3个弧度，加3个平移
-        motion_input_length = 600 # 10秒
-
         motion_seq_length = tf.shape(example["motion_sequence"])[0] #帧数
 
         windows_size = motion_input_length

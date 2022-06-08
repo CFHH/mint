@@ -10,6 +10,9 @@ import dataset_loader
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('batch_size', 8, 'batch size')
+flags.DEFINE_integer('motion_frame_length', 480, 'motion frame length') # 1秒60帧
+flags.DEFINE_integer('motion_dimension', 75, 'motion frame length') # 24个节点*3个弧度，加3个平移
+
 flags.DEFINE_integer('noise_dim', 128, 'noise dim')
 flags.DEFINE_integer('epochs', 99999999, '迭代总次数')
 flags.DEFINE_string('mode_dir', "./model", '保存模型的路径')
@@ -18,7 +21,7 @@ flags.DEFINE_string('sample_dir', "./samples", '生成数据的路径')
 
 def get_model():
     save_path = "%s/%s" % (FLAGS.mode_dir, "tmp")
-    mode = wgan_gp.WGAN_GP(loadpath=save_path, latent_dim=FLAGS.noise_dim, discriminator_extra_steps=3)
+    mode = wgan_gp.WGAN_GP(rows=FLAGS.motion_frame_length, columns=FLAGS.motion_dimension, loadpath=save_path, latent_dim=FLAGS.noise_dim, discriminator_extra_steps=3)
     return mode
 
 
@@ -45,7 +48,7 @@ def train():
     model.compile()
 
     # 加载数据集
-    train_dataset = dataset_loader.load_dataset(FLAGS.batch_size, "../data/gan_with_trans/gan_train_tfrecord-*")
+    train_dataset = dataset_loader.load_dataset(FLAGS.batch_size, FLAGS.motion_frame_length, FLAGS.motion_dimension, "../data/gan_with_trans/gan_train_tfrecord-*")
     train_iter = tf.nest.map_structure(iter, train_dataset)
 
     # 训练

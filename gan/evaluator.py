@@ -8,6 +8,8 @@ import os
 import wgan_gp
 
 FLAGS = flags.FLAGS
+flags.DEFINE_integer('motion_frame_length', 480, 'motion frame length') # 需要和trainer的一致
+flags.DEFINE_integer('motion_dimension', 75, 'motion frame length') # 需要和trainer的一致
 flags.DEFINE_integer('noise_dim', 128, 'noise dim')
 flags.DEFINE_string('mode_dir', "./model", '保存模型的路径')
 flags.DEFINE_string('sample_dir', "./samples_eval", '生成数据的路径')
@@ -15,7 +17,7 @@ flags.DEFINE_string('sample_dir', "./samples_eval", '生成数据的路径')
 
 def get_model():
     save_path = "%s/%s" % (FLAGS.mode_dir, "tmp")
-    mode = wgan_gp.WGAN_GP(loadpath=save_path, latent_dim=FLAGS.noise_dim, discriminator_extra_steps=3)
+    mode = wgan_gp.WGAN_GP(rows=FLAGS.motion_frame_length, columns=FLAGS.motion_dimension, loadpath=save_path, latent_dim=FLAGS.noise_dim, discriminator_extra_steps=3)
     return mode
 
 

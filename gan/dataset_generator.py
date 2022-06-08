@@ -28,6 +28,7 @@ flags.DEFINE_enum(
 flags.DEFINE_string(
     'tfrecord_path', '../data/gan_with_trans/gan_train_tfrecord',
     'Output path for the tfrecord files.')
+flags.DEFINE_integer('min_motion_frame_length', 480, 'min motion frame length') # 1秒60帧
 
 RNG = np.random.RandomState(42)
 
@@ -162,8 +163,11 @@ def main(_):
         #smpl_poses = R.from_rotvec(smpl_poses.reshape(-1, 3)).as_matrix().reshape(smpl_poses.shape[0], -1)
         smpl_motion = np.concatenate([smpl_trans, smpl_poses], axis=-1)
 
-        audio, audio_name = load_cached_audio_features(seq_name)
+        frame_length, _ = smpl_motion.shape
+        if frame_length < FLAGS.min_motion_frame_length:
+            continue
 
+        audio, audio_name = load_cached_audio_features(seq_name)
         tfexample = to_tfexample(smpl_motion, audio, seq_name, audio_name)
         write_tfexample(tfrecord_writers, tfexample)
 
@@ -178,8 +182,11 @@ def main(_):
             #smpl_poses = R.from_rotvec(smpl_poses.reshape(-1, 3)).as_matrix().reshape(smpl_poses.shape[0], -1)
             smpl_motion = np.concatenate([smpl_trans, smpl_poses], axis=-1)
 
-            audio, audio_name = load_cached_audio_features(random.choice(seq_names))
+            frame_length, _ = smpl_motion.shape
+            if frame_length < FLAGS.min_motion_frame_length:
+                continue
 
+            audio, audio_name = load_cached_audio_features(random.choice(seq_names))
             tfexample = to_tfexample(smpl_motion, audio, seq_name, audio_name)
             write_tfexample(tfrecord_writers, tfexample)
     
