@@ -87,7 +87,7 @@ class WGAN_GP(keras.Model):
     def start_epoch_index(self, value):
         raise ValueError
 
-    def transform(self,
+    def dense_block(self,
                   x,
                   units,
                   activation,
@@ -136,13 +136,13 @@ class WGAN_GP(keras.Model):
 
         x = img_input
         x = layers.Reshape((self.rows, self.columns))(x)
-        x = self.transform(x, self.columns * 16, layers.LeakyReLU(0.2),
+        x = self.dense_block(x, self.columns * 16, layers.LeakyReLU(0.2),
                            use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
-        x = self.transform(x, self.columns * 8, layers.LeakyReLU(0.2),
+        x = self.dense_block(x, self.columns * 8, layers.LeakyReLU(0.2),
                            use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
-        x = self.transform(x, self.columns * 4, layers.LeakyReLU(0.2),
+        x = self.dense_block(x, self.columns * 4, layers.LeakyReLU(0.2),
                            use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
-        x = self.transform(x, self.columns * 2, layers.LeakyReLU(0.2),
+        x = self.dense_block(x, self.columns * 2, layers.LeakyReLU(0.2),
                            use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
 
         x = layers.Flatten()(x)
@@ -193,13 +193,13 @@ class WGAN_GP(keras.Model):
 
         x = layers.Dense(self.rows * self.columns * 8, use_bias=False)(noise)
         x = layers.Reshape((self.rows, self.columns * 8))(x)
-        x = self.transform(x, self.columns * 8, layers.LeakyReLU(0.2),
+        x = self.dense_block(x, self.columns * 8, layers.LeakyReLU(0.2),
                            use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
-        x = self.transform(x, self.columns * 4, layers.LeakyReLU(0.2),
+        x = self.dense_block(x, self.columns * 4, layers.LeakyReLU(0.2),
                            use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
-        x = self.transform(x, self.columns * 2, layers.LeakyReLU(0.2),
+        x = self.dense_block(x, self.columns * 2, layers.LeakyReLU(0.2),
                            use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
-        x = self.transform(x, self.columns, layers.LeakyReLU(0.2),
+        x = self.dense_block(x, self.columns, layers.LeakyReLU(0.2),
                            use_bias=True, use_bn=False, use_dropout=True, drop_value=0.2)
 
         x = layers.Reshape((self.rows, self.columns, self.channels))(x)
