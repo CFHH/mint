@@ -96,5 +96,5 @@ if __name__ == "__main__":
     result_files = sorted(glob.glob("../data/original_motion_data/*.npy"), key=os.path.getmtime)  #glob.glob("samples/*.npy")
     for result_file in tqdm.tqdm(result_files):
         print("Visual %s" % result_file)
-        result_motion = np.load(result_file)[None, ...]  # [1, 120, 72]
+        result_motion = np.load(result_file)[None, ...]  # [1, 帧数, 75]
         visualize(result_motion, smpl)

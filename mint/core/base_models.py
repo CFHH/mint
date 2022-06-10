@@ -45,7 +45,7 @@ class Residual(tf.keras.Model):
 class MLP(tf.keras.Model):
   """Feedforward layer."""
 
-  def __init__(self, out_dim, hidden_dim):
+  def __init__(self, out_dim, hidden_dim): # 参数命令冲突，调用穿的是 hidden_size, intermediate_size
     super().__init__()
     self.net = tf.keras.Sequential([
         tf.keras.layers.Dense(

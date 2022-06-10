@@ -37,11 +37,12 @@ def get_closest_rotmat(rotmats):
 
 
 def recover_to_axis_angles(motion):
-    batch_size, seq_len, dim, _ = motion.shape # motion.shape = (1, 120, 72, 1)
+    batch_size, seq_len, dim, _ = motion.shape # motion.shape = (1, 480, 75, 1)
     motion = motion.reshape(batch_size, seq_len, dim)
-    assert dim == 72
-    transl = np.zeros((batch_size, seq_len, 3))
-    axis_angles = motion.reshape(batch_size, seq_len, 24, 3)
+    assert dim == 75
+    transl = motion[:, :, 0:3]
+    axis_angles = motion[:, :, 3:]
+    axis_angles = axis_angles.reshape(batch_size, seq_len, 24, 3)
     return axis_angles, transl
 
 
@@ -95,5 +96,5 @@ if __name__ == "__main__":
     result_files = sorted(glob.glob("./samples/*.npy"), key=os.path.getmtime)  #glob.glob("samples/*.npy")
     for result_file in tqdm.tqdm(result_files):
         print("Visual %s" % result_file)
-        result_motion = np.load(result_file)[None, ...]  # [1, 120, 72]
+        result_motion = np.load(result_file)[None, ...]  # [1, 480, 75]
         visualize(result_motion, smpl)
