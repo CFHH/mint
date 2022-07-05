@@ -58,6 +58,7 @@ def main(_):
     for i, seq_name in enumerate(seq_names):
         logging.info("processing %d / %d, %s" % (i + 1, n_samples, seq_name))
 
+        #smpl_poses.shape = (frame,72), smpl_trans.shape = (frame,3), smpl_trans.y = 2.0左右，xz在0附近
         smpl_poses, smpl_scaling, smpl_trans = AISTDataset.load_motion(dataset.motion_dir, seq_name)
         smpl_trans /= smpl_scaling
         smpl_motion = np.concatenate([smpl_trans, smpl_poses], axis=-1)
