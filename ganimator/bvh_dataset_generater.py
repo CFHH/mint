@@ -13,7 +13,7 @@ flags.DEFINE_string(
     'anno_dir', '../data/aist_plusplus_final',
     'Path to the AIST++ annotation files.')
 flags.DEFINE_string(
-    'bvh_data_path', '../data/bvh/',
+    'bvh_data_path', '../data/bvh_new/',
     'Output path for the bvh files.')
 
 def main(_):
