@@ -138,7 +138,8 @@ def save_motion_as_bvh(filename, positions, ratations, frametime):
     smpl_offsets[0] = [0.0, 0.0, 0.0]
     for idx, pid in enumerate(SMPL_JOINTS_PARENTS[1:]):
         smpl_offsets[idx + 1] = SMPL_JOINTS_OFFSETS[idx + 1] - SMPL_JOINTS_OFFSETS[pid]
-    # 为了在bvhacker里显示，位移必须扩大100倍（就当作是单位从米变成厘米），
+
+    # 为了在bvhacker里显示，位移必须扩大100倍（就当作是单位从米变成厘米），所以初始Y+1，后面动作的Y-1
     smpl_offsets[0][1] = 1.0
     frames, _ = positions.shape
     for i in range(frames):
