@@ -14,10 +14,11 @@ import tqdm
 from smplx import SMPL
 import vedo
 import trimesh
+import smpl_bvh_writer
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('bvh_path', '../data/bvh/', 'Output path for the bvh files.')
-flags.DEFINE_string('bvh_file', 'gBR_sBM_cAll_d04_mBR0_ch01', 'Output path for the bvh files.')
+flags.DEFINE_string('bvh_file', 'gWA_sFM_cAll_d25_mWA4_ch05', 'Output path for the bvh files.')
 
 def visualize(smpl_model, smpl_trans, smpl_poses, frametime):
     #position: smpl_trans.shape = (frames, 3)
@@ -58,6 +59,16 @@ def visualize(smpl_model, smpl_trans, smpl_poses, frametime):
     vedo.interactive().close()
 
 def load_bvh_motion(filename):
+    """
+    seq = smpl_bvh_writer.ROTATION_SEQ
+    inv_seq = np.zeros(len(seq), dtype=np.int32)
+    dic = {}
+    for i in range(len(seq)):
+        dic[seq[i]] = i
+    for i in range(len(seq)):
+        inv_seq[i] = dic[i]
+    """
+
     cur_step = 0
     f = open(filename, "r")
     for line in f:
@@ -95,6 +106,7 @@ def load_bvh_motion(filename):
             i += 1
 
     rotations = rotations.reshape(frames, 24, 3)
+    rotations = rotations[:, smpl_bvh_writer.ROTATION_SEQ_INV, :]
     return positions, rotations, frametime
 
 def main(_):

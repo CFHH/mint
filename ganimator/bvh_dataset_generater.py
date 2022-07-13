@@ -54,7 +54,7 @@ def main(_):
         assert dim == 72
         rotations = smpl_poses * (180/math.pi) #换成角度
         rotations = rotations.reshape(frames, 24, 3)
-        #rotations = rotations[:, smpl_bvh_writer.ROTATION_SEQ, :] #居然不需要这样
+        #rotations = rotations[:, smpl_bvh_writer.ROTATION_SEQ, :] #写入时再转换吧
 
         save_path = os.path.join(FLAGS.bvh_data_path, '%s.bvh' % seq_name)
         frametime = 1.0/60
