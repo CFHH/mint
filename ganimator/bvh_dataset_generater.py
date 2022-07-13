@@ -52,13 +52,13 @@ def main(_):
         # smpl_poses.shape = (frame,72)
         frames, dim = smpl_poses.shape
         assert dim == 72
-        retations = smpl_poses * (180/math.pi) #换成角度
-        retations = retations.reshape(frames, 24, 3)
-        #retations = retations[:, smpl_bvh_writer.ROTATION_SEQ, :] #居然不需要这样
+        rotations = smpl_poses * (180/math.pi) #换成角度
+        rotations = rotations.reshape(frames, 24, 3)
+        #rotations = rotations[:, smpl_bvh_writer.ROTATION_SEQ, :] #居然不需要这样
 
         save_path = os.path.join(FLAGS.bvh_data_path, '%s.bvh' % seq_name)
         frametime = 1.0/60
-        smpl_bvh_writer.save_motion_as_bvh(save_path, positions, retations, frametime)
+        smpl_bvh_writer.save_motion_as_bvh(save_path, positions, rotations, frametime)
 
 if __name__ == '__main__':
   app.run(main)
