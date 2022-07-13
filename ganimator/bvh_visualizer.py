@@ -17,10 +17,23 @@ import trimesh
 import smpl_bvh_writer
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('bvh_path', '../data/bvh/', 'Output path for the bvh files.')
-flags.DEFINE_string('bvh_file', 'gWA_sFM_cAll_d25_mWA4_ch05', 'Output path for the bvh files.')
+flags.DEFINE_string('bvh_path', '../data/bvh/', 'file path')
+flags.DEFINE_string('bvh_file', 'gWA_sFM_cAll_d25_mWA4_ch05', 'file name')
+flags.DEFINE_integer('bpm', 120, 'bpm')
+flags.DEFINE_float('ignoretime', 0.0, 'ignore time')
 
-def visualize(smpl_model, smpl_trans, smpl_poses, frametime):
+def is_on_beat(motion_time, bpm):
+    motion_time -= FLAGS.ignoretime
+    beat_time = 60.0 / float(bpm)
+    tolerance = 0.03 #30毫秒，帧率不高
+    delta_time = motion_time - beat_time * float(int((motion_time + tolerance) / beat_time))
+    if math.fabs(delta_time) < tolerance:
+        print(motion_time)
+        return True
+    else:
+        return False
+
+def visualize(smpl_model, smpl_trans, smpl_poses, frametime, bpm=120):
     #position: smpl_trans.shape = (frames, 3)
     #rotation: smpl_poses.shape = (frames, 24, 3)
 
@@ -43,18 +56,31 @@ def visualize(smpl_model, smpl_trans, smpl_poses, frametime):
     world = vedo.Box(bbox_center, bbox_size[0], bbox_size[1], bbox_size[2]).wireframe()
     vedo.show(world, axes=True, viewup="y", interactive=0)
 
-    i = 0
-    while i < keypoints3d.shape[0]:
-        keypoints3d_i = keypoints3d[i]
-        vertices_i = vertices[i]
-        i += 1
+    start_time = time.time() #类似这样的一个数字：1657703177.133365，单位上秒
+    last_time = start_time
+    while True:
+        cur_time = time.time()
+        if cur_time < last_time:
+            cur_time = last_time
+        else:
+            last_time = cur_time
+        delta_time = cur_time - start_time
+        frame_index = int(delta_time / frametime)
+        if frame_index >= keypoints3d.shape[0]:
+            break
+
+        keypoints3d_i = keypoints3d[frame_index]
+        vertices_i = vertices[frame_index]
+
         mesh = trimesh.Trimesh(vertices_i, smpl_model.faces)
-        mesh.visual.face_colors = [200, 200, 250, 100]
+        if is_on_beat(delta_time, bpm):
+            mesh.visual.face_colors = [200, 50, 50, 100]
+        else:
+            mesh.visual.face_colors = [200, 200, 250, 100]
         pts = vedo.Points(keypoints3d_i, r=20)
         plotter = vedo.show(world, mesh, interactive=0)
         if plotter.escaped:
             break  # if ESC
-        time.sleep(0.005)
 
     vedo.interactive().close()
 
@@ -113,7 +139,7 @@ def main(_):
     smpl_model = SMPL(model_path="../others/smpl/", gender='MALE', batch_size=1)
     filename = os.path.join(FLAGS.bvh_path, '%s.bvh' % FLAGS.bvh_file)
     positions, rotations, frametime = load_bvh_motion(filename)
-    visualize(smpl_model, positions, rotations, frametime)
+    visualize(smpl_model, positions, rotations, frametime, bpm=FLAGS.bpm)
 
 if __name__ == '__main__':
   app.run(main)
