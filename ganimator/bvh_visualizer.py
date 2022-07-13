@@ -99,7 +99,7 @@ def load_bvh_motion(filename):
 
 def main(_):
     smpl_model = SMPL(model_path="../others/smpl/", gender='MALE', batch_size=1)
-    filename = os.path.pjoin(FLAGS.bvh_path, f'{FLAGS.bvh_file}.bvh')
+    filename = os.path.join(FLAGS.bvh_path, '%s.bvh' % FLAGS.bvh_file)
     positions, rotations, frametime = load_bvh_motion(filename)
     visualize(smpl_model, positions, rotations, frametime)
 
