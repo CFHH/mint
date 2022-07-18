@@ -16,6 +16,9 @@ import vedo
 import trimesh
 import smpl_bvh_writer
 
+# python bvh_visualizer.py --bvh_path=../data/bvh --bvh_file=gWA_sFM_cAll_d25_mWA4_ch05
+# python bvh_visualizer.py --bvh_path=../../ganimator/results/gWA_sFM_cAll_d25_mWA4_ch05/bvh --bvh_file=result_fixed
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('bvh_path', '../data/bvh/', 'file path')
 flags.DEFINE_string('bvh_file', 'gWA_sFM_cAll_d25_mWA4_ch05', 'file name')
