@@ -8,13 +8,19 @@ import math
 from aist_plusplus.loader import AISTDataset
 import smpl_bvh_writer
 
+# python bvh_dataset_generater.py --bvh_data_path=../data/bvh_scale/ --scale100=True
+# python bvh_dataset_generater.py --bvh_data_path=../data/bvh_noscale/ --scale100=False
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string(
     'anno_dir', '../data/aist_plusplus_final',
     'Path to the AIST++ annotation files.')
 flags.DEFINE_string(
-    'bvh_data_path', '../data/bvh/',
+    'bvh_data_path', '../data/bvh_scale/', #路径需要带/，不然makedirs创建不了
     'Output path for the bvh files.')
+flags.DEFINE_boolean(
+    'scale100', True, #默认True是因为放大了才能在bvhacker里查看
+    'scale position and offset')
 
 def main(_):
     os.makedirs(os.path.dirname(FLAGS.bvh_data_path), exist_ok=True)
@@ -57,8 +63,8 @@ def main(_):
         #rotations = rotations[:, smpl_bvh_writer.ROTATION_SEQ, :] #写入时再转换吧
 
         save_path = os.path.join(FLAGS.bvh_data_path, '%s.bvh' % seq_name)
-        frametime = 1.0/60
-        smpl_bvh_writer.save_motion_as_bvh(save_path, positions, rotations, frametime)
+        frametime = 1.0/60 #帧时间，这个库是每秒60帧
+        smpl_bvh_writer.save_motion_as_bvh(save_path, positions, rotations, frametime, scale100=FLAGS.scale100)
 
 if __name__ == '__main__':
   app.run(main)

@@ -134,18 +134,22 @@ def write_smpl_bvh(filename, names, parent, offset, xyz_ratation_order, position
     """
     return
 
-def save_motion_as_bvh(filename, positions, ratations, frametime):
+def save_motion_as_bvh(filename, positions, ratations, frametime, scale100=True):
     smpl_offsets = np.zeros([24, 3])
     smpl_offsets[0] = [0.0, 0.0, 0.0]
     for idx, pid in enumerate(SMPL_JOINTS_PARENTS[1:]):
         smpl_offsets[idx + 1] = SMPL_JOINTS_OFFSETS[idx + 1] - SMPL_JOINTS_OFFSETS[pid]
 
-    # 为了在bvhacker里显示，位移必须扩大100倍（就当作是单位从米变成厘米），所以初始Y+1，后面动作的Y-1
-    smpl_offsets[0][1] = 1.0
-    frames, _ = positions.shape
-    for i in range(frames):
-        positions[i][1] = positions[i][1] - 1.0
-    write_smpl_bvh(filename, SMPL_JOINTS_NAMES, SMPL_JOINTS_PARENTS, smpl_offsets, 'xyz', positions, ratations, frametime, scale100=True)
+    if scale100:
+        #为了在bvhacker里显示，位移必须扩大100倍（就当作是单位从米变成厘米）
+        #而让程序知道放大； 100倍，就必须放根节点的offset的Y大于10
+        #所以，在此处初始Y+1，后面动作的Y-1
+        smpl_offsets[0][1] = 1.0
+        frames, _ = positions.shape
+        for i in range(frames):
+            positions[i][1] = positions[i][1] - 1.0
+
+    write_smpl_bvh(filename, SMPL_JOINTS_NAMES, SMPL_JOINTS_PARENTS, smpl_offsets, 'xyz', positions, ratations, frametime, scale100=scale100)
 
 def test():
     dummy_frames = 10
@@ -154,7 +158,7 @@ def test():
     for i in range(dummy_frames):
         positions[i] = base_position
     ratations = np.zeros([dummy_frames, 24, 3])
-    save_motion_as_bvh('./my.bvh', positions, ratations, 0.033333333)
+    save_motion_as_bvh('./my.bvh', positions, ratations, 0.033333333, True)
 
 if __name__ == '__main__':
     test()
