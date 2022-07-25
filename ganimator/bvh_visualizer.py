@@ -18,12 +18,14 @@ import smpl_bvh_writer
 
 # python bvh_visualizer.py --bvh_path=../data/bvh --bvh_file=gWA_sFM_cAll_d25_mWA4_ch05
 # python bvh_visualizer.py --bvh_path=../../ganimator/results/gWA_sFM_cAll_d25_mWA4_ch05/bvh --bvh_file=result_fixed
+# python bvh_visualizer.py --bvh_path=../../ganimator/results/list_1_noscale/bvh --bvh_file=result_fixed --scaled=False
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('bvh_path', '../data/bvh/', 'file path')
 flags.DEFINE_string('bvh_file', 'gWA_sFM_cAll_d25_mWA4_ch05', 'file name')
 flags.DEFINE_integer('bpm', 120, 'bpm')
 flags.DEFINE_float('ignoretime', 0.0, 'ignore time')
+flags.DEFINE_boolean('scaled', True, 'if true, need / 100')
 
 def is_on_beat(motion_time, bpm):
     motion_time -= FLAGS.ignoretime
@@ -124,8 +126,9 @@ def load_bvh_motion(filename):
             assert len(data_block) == 75
 
             position = data_block[0:3]
-            position /= 100.0
-            position[1] += 1.0
+            if FLAGS.scaled:
+                position /= 100.0
+                position[1] += 1.0
 
             rotation = data_block[3:]
             rotation *= (math.pi / 180)
