@@ -61,7 +61,7 @@ def visualize(smpl_model, smpl_trans, smpl_poses, frametime, bpm=120):
     world = vedo.Box(bbox_center, bbox_size[0], bbox_size[1], bbox_size[2]).wireframe()
     vedo.show(world, axes=True, viewup="y", interactive=0)
 
-    start_time = time.time() #类似这样的一个数字：1657703177.133365，单位上秒
+    start_time = time.time() #类似这样的一个数字：1657703177.133365，单位是秒
     last_time = start_time
     while True:
         cur_time = time.time()
