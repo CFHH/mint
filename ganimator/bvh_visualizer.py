@@ -16,6 +16,8 @@ import vedo
 import trimesh
 import smpl_bvh_writer
 
+# python bvh_visualizer.py --bvh_path=../../ganimator/results/Joe/bvh --bvh_file=result_fixed
+
 # python bvh_visualizer.py --bvh_path=../data/bvh --bvh_file=gWA_sFM_cAll_d25_mWA4_ch05
 # python bvh_visualizer.py --bvh_path=../../ganimator/results/gWA_sFM_cAll_d25_mWA4_ch05/bvh --bvh_file=result_fixed
 # python bvh_visualizer.py --bvh_path=../../ganimator/results/list_1_noscale/bvh --bvh_file=result_fixed --scaled=False

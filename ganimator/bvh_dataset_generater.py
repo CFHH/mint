@@ -11,6 +11,9 @@ import smpl_bvh_writer
 # python bvh_dataset_generater.py --bvh_data_path=../data/bvh_scale/ --scale100=True
 # python bvh_dataset_generater.py --bvh_data_path=../data/bvh_noscale/ --scale100=False
 
+# python bvh_dataset_generater.py --bvh_data_path=../data/bvh_scale_split/ --scale100=True --split_length=2.0
+# python bvh_dataset_generater.py --bvh_data_path=../data/bvh_noscale_split/ --scale100=False --split_length=2.0
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string(
     'anno_dir', '../data/aist_plusplus_final',
@@ -21,6 +24,9 @@ flags.DEFINE_string(
 flags.DEFINE_boolean(
     'scale100', True, #默认True是因为放大了才能在bvhacker里查看
     'scale position and offset')
+flags.DEFINE_float(
+    'split_length', -1.0, #把动作分割成固定长度的片段
+    'split length')
 
 def main(_):
     os.makedirs(os.path.dirname(FLAGS.bvh_data_path), exist_ok=True)
@@ -62,9 +68,22 @@ def main(_):
         rotations = rotations.reshape(frames, 24, 3)
         #rotations = rotations[:, smpl_bvh_writer.ROTATION_SEQ, :] #写入时再转换吧
 
-        save_path = os.path.join(FLAGS.bvh_data_path, '%s.bvh' % seq_name)
-        frametime = 1.0/60 #帧时间，这个库是每秒60帧
-        smpl_bvh_writer.save_motion_as_bvh(save_path, positions, rotations, frametime, scale100=FLAGS.scale100)
+        FPS = 60.0 #AIST++库是每秒60帧
+        frametime = 1.0/FPS
+        if FLAGS.split_length > 0:
+            frames_per_split = round(FPS * FLAGS.split_length)
+            count = int(frames / frames_per_split)
+            logging.info("frames = %d, count = %d" % (frames, count))
+            for k in range(count):
+                start = frames_per_split * k
+                end = frames_per_split * (k+1) + 1 # 第一段[0, 120]，第二段[120, 240]
+                if end <= frames + 1:
+                    file_name = "%s_%d.bvh" % (seq_name, k)
+                    save_path = os.path.join(FLAGS.bvh_data_path, file_name)
+                    smpl_bvh_writer.save_motion_as_bvh(save_path, positions[start:end,], rotations[start:end,], frametime, scale100=FLAGS.scale100)
+        else:
+            save_path = os.path.join(FLAGS.bvh_data_path, '%s.bvh' % seq_name)
+            smpl_bvh_writer.save_motion_as_bvh(save_path, positions, rotations, frametime, scale100=FLAGS.scale100)
 
 if __name__ == '__main__':
   app.run(main)

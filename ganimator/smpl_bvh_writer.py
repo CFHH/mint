@@ -153,11 +153,19 @@ def save_motion_as_bvh(filename, positions, ratations, frametime, scale100=True)
 
 def test():
     dummy_frames = 10
-    base_position = [0.0, 2.0, 0.0]
+    base_position = [0.0, 0.9, 0.0]
     positions = np.zeros([dummy_frames, 3])
     for i in range(dummy_frames):
         positions[i] = base_position
     ratations = np.zeros([dummy_frames, 24, 3])
+    # 实测得，旋转角度的含义是绕XYZ轴，按右手螺旋旋转，是intrinsic rotations
+    # intrinsic rotations的含义就是旋转轴是跟随物体的，见
+    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.as_euler.html#r72d546869407-1
+    # X：人物自身的右脚朝左脚；Y：指向人物头顶方向；Z：右手系根据XY确定Z
+    # 先X再Y（x=75，y=90），先Y再Z（y=75，z=90），先X再Z（x=90，z=90）
+    ratations[:, 0, 0] = 75
+    ratations[:, 0, 1] = 0
+    ratations[:, 0, 2] = 90
     save_motion_as_bvh('./my.bvh', positions, ratations, 0.033333333, True)
 
 if __name__ == '__main__':
