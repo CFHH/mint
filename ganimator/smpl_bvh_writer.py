@@ -147,9 +147,14 @@ def save_motion_as_bvh(filename, positions, ratations, frametime, scale100=True)
         smpl_offsets[0][1] = 1.0
         frames, _ = positions.shape
         for i in range(frames):
-            positions[i][1] = positions[i][1] - 1.0
+            positions[i][1] = positions[i][1] - 1.0 # 这会改变原始数据
 
     write_smpl_bvh(filename, SMPL_JOINTS_NAMES, SMPL_JOINTS_PARENTS, smpl_offsets, 'xyz', positions, ratations, frametime, scale100=scale100)
+
+    if scale100:
+        frames, _ = positions.shape
+        for i in range(frames):
+            positions[i][1] = positions[i][1] + 1.0  # 改回来
 
 def test():
     dummy_frames = 10

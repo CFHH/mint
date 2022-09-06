@@ -73,7 +73,7 @@ def main(_):
         if FLAGS.split_length > 0:
             frames_per_split = round(FPS * FLAGS.split_length)
             count = int(frames / frames_per_split)
-            logging.info("frames = %d, count = %d" % (frames, count))
+            logging.info("    frames = %d, count = %d" % (frames, count))
             for k in range(count):
                 start = frames_per_split * k
                 end = frames_per_split * (k+1) + 1 # 第一段[0, 120]，第二段[120, 240]
