@@ -86,4 +86,4 @@ def main(_):
             smpl_bvh_writer.save_motion_as_bvh(save_path, positions, rotations, frametime, scale100=FLAGS.scale100)
 
 if __name__ == '__main__':
-  app.run(main)
+    app.run(main)
