@@ -66,7 +66,7 @@ def main(_):
         assert dim == 72
         rotations = smpl_poses * (180/math.pi) #换成角度
         rotations = rotations.reshape(frames, 24, 3)
-        #rotations = rotations[:, smpl_bvh_writer.ROTATION_SEQ, :] #写入时再转换吧
+        #rotations = rotations[:, smpl_bvh_writer.ROTATION_SEQ, :] #写入时再转换吧，见write_smpl_bvh()中的“seq = []”
 
         FPS = 60.0 #AIST++库是每秒60帧
         frametime = 1.0/FPS

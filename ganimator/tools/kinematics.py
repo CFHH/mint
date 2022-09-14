@@ -1,4 +1,9 @@
 import torch
+"""
+TODO ZZW
+为了能在windows命令行里运行(当前目录在ganimator)，这里是  from tools.transforms import ……
+为了能在pycharm里调试，这里应该是 from ganimator.tools.transforms import ……
+"""
 from ganimator.tools.transforms import quat2mat, repr6d2mat, euler2mat, get_closest_rotmat
 
 
