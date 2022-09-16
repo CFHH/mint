@@ -16,7 +16,7 @@ from tools.Quaternions import Quaternions
 FLAGS = flags.FLAGS
 flags.DEFINE_string('motion_data_path', '../data/bvh_scale_split/', 'motion data path')
 flags.DEFINE_boolean('scaled', True, 'if true, need / 100')
-flags.DEFINE_string('save_path', '../data/', 'motion data for synthesis')
+flags.DEFINE_string('motion_json_path', '../data/bvh_scale_split/', 'motion data for synthesis')
 
 def load_bvh_motion(filename):
     cur_step = 0
@@ -97,10 +97,10 @@ def process(filename):
     """
     start_rotation  : (3,)，起始帧，根骨骼的欧拉角（单位是角度）【是否只需要Y的旋转】
     start_position_r: (24,3)，起始帧，各骨骼节点相对根骨骼的位移（单位是厘米）
-    start_velocity  : (24,)，起始帧，各骨骼节点的速度（在1/30秒内的位移，单位是厘米）
-    end_rotation    : (24,)，结束帧
-    end_position_r  : (24,)，结束帧
-    end_velocity    : (24,)，结束帧
+    start_velocity  : (24,3)，起始帧，各骨骼节点的速度（在1/30秒内的位移，单位是厘米）
+    end_rotation    : (3,)，结束帧
+    end_position_r  : (24,3)，结束帧
+    end_velocity    : (24,3)，结束帧
     root_offset     : (3,)，整个动作期间，根骨骼的偏移（单位是厘米）【是否不需要考虑Y】
     
     起始帧各骨骼的位置（相对根骨骼，根骨骼xz归零时的位置，y是上下方向）、速度
@@ -147,8 +147,8 @@ def process(filename):
     return motion_data
 
 def main(_):
+    # 调试用
     #process("../data/bvh_scale/gWA_sFM_cAll_d25_mWA4_ch05.bvh")
-    #return
 
     json_data = {}
     save_path = os.path.join(FLAGS.motion_data_path, "*.bvh")
@@ -160,7 +160,7 @@ def main(_):
         json_data[key] = motion_data
 
     json_str = json.dumps(json_data)
-    json_file = os.path.join(FLAGS.save_path, "synthesis_motion.dat")
+    json_file = os.path.join(FLAGS.motion_json_path, "synthesis_motion.dat")
     with open(json_file, 'w') as f:
         f.write(json_str)
 
