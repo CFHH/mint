@@ -6,9 +6,15 @@ import numpy as np
 import math
 import random
 import json
+import torch
+import bvh_loader
+import smpl_bvh_writer
+from tools.Quaternions import Quaternions
+from tools.transforms import quat2euler
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('motion_data_path', '../data/bvh_scale_split/', 'motion data path')
+flags.DEFINE_boolean('scaled', True, '动作是否已经放大了100倍')
 flags.DEFINE_string('motion_json_path', '../data/bvh_scale_split/', 'motion data for synthesis')
 flags.DEFINE_integer('target_number', 30, 'target motion segment number')
 
@@ -46,7 +52,40 @@ def calc_transition_cost(json_data, key1, key2, accumulated_offset):
 
     return cost
 
-def synthesiser_as_bvh():
+def synthesiser_as_bvh(json_data, motion_name_seq):
+    num = len(motion_name_seq)
+    final_positions = []
+    final_rotations = []
+    accumulated_offset = np.array([0.0, 0.0, 0.0])
+    for i in range(num):
+        motion_name = motion_name_seq[i]
+        motion_data = json_data[motion_name]
+        filename = os.path.join(FLAGS.motion_data_path, motion_name)
+        """
+        positions: (帧数, 3)，np.array，各帧根骨骼的位移（单位是米）
+        rotations: (帧数, 24, 3)，np.array，各帧各骨骼节点的欧拉角（单位是角度）
+        """
+        _, _, _, positions, rotations, _ = bvh_loader.load_bvh_motion(filename, FLAGS.scaled)
+        # 先调整根骨骼位置，把动作移到原点
+        root_adjust = np.array([positions[0,0], 0.0, positions[0,2]]) # Y保持不变
+        positions -= root_adjust
+        if i != 0:
+            # 移动到上一个动作的结束位置
+            positions += accumulated_offset
+            # 对上个动作的末尾几帧和当前动作的开头几帧，做插值
+            pre_rotation = final_rotations[-1]
+            pre_qs = Quaternions.from_euler(np.radians(pre_rotation), world=False).qs
+
+            cur_qs = Quaternions.from_euler(np.radians(rotations), world=False).qs
+            cur_qs = torch.tensor(cur_qs, dtype=torch.float)
+
+            cur_rotations2 = quat2euler(cur_qs)
+            cur_rotations2 = cur_rotations2.numpy()
+            dif = cur_rotations2 - rotations
+
+        accumulated_offset += motion_data['root_offset']
+        final_positions.append(positions)
+        final_rotations.append(rotations)
     return
 
 

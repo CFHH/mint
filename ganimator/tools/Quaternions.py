@@ -423,7 +423,7 @@ class Quaternions:
     
     @classmethod
     def from_euler(cls, es, order='xyz', world=False):
-    
+        # world : If set to true euler angles are applied together in world space rather than local space
         axis = {
             'x' : np.array([1,0,0]),
             'y' : np.array([0,1,0]),
