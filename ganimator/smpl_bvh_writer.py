@@ -78,7 +78,21 @@ ROTATION_SEQ_INV把bvh顺序变成smpl顺序
 ROTATION_SEQ = [0, 1, 4, 7, 10, 2, 5, 8, 11, 3, 6, 9, 12, 15, 13, 16, 18, 20, 22, 14, 17, 19, 21, 23]
 ROTATION_SEQ_INV = [0, 1, 5, 9, 2, 6, 10, 3, 7, 11, 4, 8, 12, 14, 19, 13, 15, 20, 16, 21, 17, 22, 18, 23]
 
-def write_smpl_bvh(filename, names, parent, offset, xyz_ratation_order, positions, rotations, frametime, scale100=False):
+def write_smpl_bvh(filename, names, parent, offset, xyz_ratation_order, positions, rotations, frametime,
+                   scale100=False, rotation_order='smpl'):
+    """
+    :param filename:
+    :param names:
+    :param parent:
+    :param offset:
+    :param xyz_ratation_order:
+    :param positions:
+    :param rotations:
+    :param frametime:
+    :param scale100:
+    :param rotation_order: ['smpl', 'bvh'], rotations中骨骼节点的顺序，模式是smpl顺序，写入bvh需要转成bvh顺序
+    :return:
+    """
     file = open(filename, 'w')
     joints_num = len(names)
     xyz_ratation_order = xyz_ratation_order.upper()
@@ -128,7 +142,12 @@ def write_smpl_bvh(filename, names, parent, offset, xyz_ratation_order, position
         else:
             file_string += '%.6f %.6f %.6f ' % (positions[i][0], positions[i][1], positions[i][2])
         for j in range(joints_num):
-            idx = seq[j]
+            if rotation_order == 'smpl':
+                idx = seq[j]
+            elif rotation_order == 'bvh':
+                idx = j
+            else:
+                raise Exception('Unknown rotation order')
             file_string += '%.6f %.6f %.6f ' % (rotations[i][idx][0], rotations[i][idx][1], rotations[i][idx][2])
         file_string += '\n'
 
@@ -145,7 +164,7 @@ def write_smpl_bvh(filename, names, parent, offset, xyz_ratation_order, position
     """
     return
 
-def save_motion_as_bvh(filename, positions, ratations, frametime, scale100=True):
+def save_motion_as_bvh(filename, positions, ratations, frametime, scale100=True, rotation_order='smpl'):
     smpl_offsets = np.zeros([24, 3])
     smpl_offsets[0] = [0.0, 0.0, 0.0]
     for idx, pid in enumerate(SMPL_JOINTS_PARENTS[1:]):
@@ -160,7 +179,7 @@ def save_motion_as_bvh(filename, positions, ratations, frametime, scale100=True)
         for i in range(frames):
             positions[i][1] = positions[i][1] - 1.0 # 这会改变原始数据
 
-    write_smpl_bvh(filename, SMPL_JOINTS_NAMES, SMPL_JOINTS_PARENTS, smpl_offsets, 'xyz', positions, ratations, frametime, scale100=scale100)
+    write_smpl_bvh(filename, SMPL_JOINTS_NAMES, SMPL_JOINTS_PARENTS, smpl_offsets, 'xyz', positions, ratations, frametime, scale100=scale100, rotation_order=rotation_order)
 
     if scale100:
         frames, _ = positions.shape

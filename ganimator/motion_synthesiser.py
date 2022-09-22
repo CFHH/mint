@@ -57,6 +57,7 @@ def calc_transition_cost(json_data, key1, key2, accumulated_offset):
     return cost
 
 def synthesiser_as_bvh(json_data, motion_name_seq, save_file, transition_time = 0.2):
+    print(motion_name_seq)
     FrameTime = 0.01666667
     transition_frames = round(transition_time / FrameTime)
     pre_frame_num = int((transition_frames + 1) / 2)
@@ -143,7 +144,7 @@ def synthesiser_as_bvh(json_data, motion_name_seq, save_file, transition_time = 
         merged_positions[start:end] = final_positions[i]
         merged_rotations[start:end] = final_rotations[i]
         start = end
-    smpl_bvh_writer.save_motion_as_bvh(save_file, merged_positions, merged_rotations, FrameTime, scale100=FLAGS.save_scaled)
+    smpl_bvh_writer.save_motion_as_bvh(save_file, merged_positions, merged_rotations, FrameTime, scale100=FLAGS.save_scaled, rotation_order='bvh')
 
 
 def main(_):
