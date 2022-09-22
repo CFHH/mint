@@ -85,31 +85,31 @@ def synthesiser_as_bvh(json_data, motion_name_seq, save_file, transition_time = 
         """
         _, _, offsets, positions, rotations, _ = bvh_loader.load_bvh_motion(filename, FLAGS.scaled)
 
-        # 调整根骨骼位置，把动作移到原点
-        root_adjust = np.array([-positions[0, 0], 0.0, -positions[0, 2]]) # Y保持不变
-        root_adjust += offsets[0,]
-        positions += root_adjust
-
-        if seq_index != num - 1:
-            positions = positions[0:-1,] #舍弃最后一帧
-
         if seq_index == 0:
-            final_positions.append(positions)
+            accumulated_offset[1] += positions[0, 1] + offsets[0, 1]
+
+        # 一、根骨骼位置
+        root_adjust = accumulated_offset - positions[0,]
+        positions += root_adjust
+        accumulated_offset = positions[-1,]
+        if seq_index != num - 1:
+            positions = positions[0:-1, ]  # 舍弃最后一帧
+        final_positions.append(positions)
+        total_frames += positions.shape[0]
+
+        # 二、各骨骼欧拉角
+        if seq_index == 0:
             final_rotations.append(rotations)
-            accumulated_offset += motion_data['root_offset'] # 注意：这个单位是厘米！！因为'root_offset'是厘米
-            total_frames += positions.shape[0]
         else:
             """
+            各骨骼节点的欧拉角插值
             对上个动作的末尾几帧和当前动作的开头几帧，做插值
             如果fps=60，那么2秒的动作共121帧数据，2个2秒的动作合并后应该是241帧，而不是242帧，省略上一动作的最后一帧
             P P P P P P P P P P
                               C C C C C C C C C C
             """
-            # 根骨骼位置的插值：只需要移动到上一个动作的结束位置
-            positions += accumulated_offset / 100.0
+            pre_rotations = final_rotations.pop() # 弹出上一帧
 
-            # 旋转插值
-            pre_rotations = final_rotations.pop()
             pre_last_rotation = pre_rotations[-1,]
             pre_rotations = pre_rotations[0:-1,] #舍弃最后一帧
             pre_last_quat = Quaternions.from_euler(np.radians(pre_last_rotation), world=False)
@@ -122,17 +122,15 @@ def synthesiser_as_bvh(json_data, motion_name_seq, save_file, transition_time = 
                 slerp_quat = Quaternions.slerp(pre_quat, cur_first_quat, pre_t[i])
                 slerp_euler = np.degrees(slerp_quat.euler())
                 pre_rotations[-pre_frame_num + i] = slerp_euler
+
             for i in range(cur_frame_num):
                 cur_quat = Quaternions.from_euler(np.radians(rotations[i]), world=False)
                 slerp_quat = Quaternions.slerp(cur_quat, pre_last_quat, cur_t[i])
                 slerp_euler = np.degrees(slerp_quat.euler())
                 rotations[i] = slerp_euler
 
-            final_positions.append(positions)
-            final_rotations.append(pre_rotations)
+            final_rotations.append(pre_rotations) # 重新压入上一帧
             final_rotations.append(rotations)
-            accumulated_offset += motion_data['root_offset']
-            total_frames += positions.shape[0]
 
     merged_positions = np.zeros([total_frames,3])
     merged_rotations = np.zeros([total_frames,24, 3])
