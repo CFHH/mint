@@ -74,7 +74,9 @@ def process(filename):
     end_velocity = end_velocity * 100
     root_offset = root_offset * 100
 
-    motion_data = {'start_rotation': start_rotation.tolist(),
+    motion_data = {'frametime': frametime,
+                 'frames': root_positions.shape[0],
+                 'start_rotation': start_rotation.tolist(),
                  'start_position': start_position_r.tolist(),
                  'start_velocity': start_velocity.tolist(),
                  'end_rotation': end_rotation.tolist(),

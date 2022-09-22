@@ -76,8 +76,9 @@ def main(_):
             logging.info("    frames = %d, count = %d" % (frames, count))
             for k in range(count):
                 start = frames_per_split * k
-                end = frames_per_split * (k+1) + 1 # 第一段[0, 120]，第二段[120, 240]
-                if end <= frames + 1:
+                end = frames_per_split * (k+1) + 1 # 第一段取[0,121)得到[0, 120]，第二段取[120,241)得到[120, 240]
+                # 若动作长度是720帧，最后一帧索引是719，则k=5时，取[600,721)得到[0, 120]
+                if end <= frames:
                     file_name = "%s_%d.bvh" % (seq_name, k)
                     save_path = os.path.join(FLAGS.bvh_data_path, file_name)
                     smpl_bvh_writer.save_motion_as_bvh(save_path, positions[start:end,], rotations[start:end,], frametime, scale100=FLAGS.scale100)

@@ -381,7 +381,7 @@ class Quaternions:
         
     @classmethod
     def slerp(cls, q0s, q1s, a):
-        
+        # return : q0s * (1-a) + q1s * a
         fst, snd = cls._broadcast(q0s.qs, q1s.qs)
         fst, a = cls._broadcast(fst, a, scalar=True)
         snd, a = cls._broadcast(snd, a, scalar=True)

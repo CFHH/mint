@@ -1,6 +1,6 @@
 import numpy as np
 
-# 这个顺序是aist++数据集中的顺序，也是SMPL的默认顺序，不能该
+# 这个顺序是aist++数据集中的顺序，也是SMPL的默认顺序，不能改
 SMPL_JOINTS_NAMES = [
     "pelvis",       #0
     "l_hip",        #1
@@ -68,13 +68,14 @@ SMPL_JOINTS_OFFSETS = np.array(
 )
 
 """
-这是转成bvh文件后，各骨骼节点的出场次序，也就是变成这个顺序
+这是转成bvh文件后，各骨骼节点的出场次序，
 ['pelvis', 'l_hip', 'l_knee', 'l_ankle', 'l_foot', 'r_hip', 'r_knee', 'r_ankle', 'r_foot', 'spine1', 
  'spine2', 'spine3', 'neck', 'head', 'l_collar', 'l_shoulder', 'l_elbow', 'l_wrist', 'l_hand', 'r_collar', 
  'r_shoulder', 'r_elbow', 'r_wrist', 'r_hand']
+ROTATION_SEQ把smpl顺序变成bvh顺序
+ROTATION_SEQ_INV把bvh顺序变成smpl顺序
 """
 ROTATION_SEQ = [0, 1, 4, 7, 10, 2, 5, 8, 11, 3, 6, 9, 12, 15, 13, 16, 18, 20, 22, 14, 17, 19, 21, 23]
-# ROTATION_SEQ的逆向，用于把bvh中的数据顺序转成smpl可以使用的数据顺序
 ROTATION_SEQ_INV = [0, 1, 5, 9, 2, 6, 10, 3, 7, 11, 4, 8, 12, 14, 19, 13, 15, 20, 16, 21, 17, 22, 18, 23]
 
 def write_smpl_bvh(filename, names, parent, offset, xyz_ratation_order, positions, rotations, frametime, scale100=False):

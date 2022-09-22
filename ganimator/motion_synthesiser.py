@@ -18,6 +18,10 @@ flags.DEFINE_boolean('scaled', True, '动作是否已经放大了100倍')
 flags.DEFINE_string('motion_json_path', '../data/bvh_scale_split/', 'motion data for synthesis')
 flags.DEFINE_integer('target_number', 30, 'target motion segment number')
 
+flags.DEFINE_string('save_path', './', '保存目录')
+flags.DEFINE_string('save_name', 'test', '保存目录')
+flags.DEFINE_boolean('save_scaled', True, 'scale position and offset')
+
 def load_motion_config():
     json_data = None
     json_file = os.path.join(FLAGS.motion_json_path, "synthesis_motion.dat")
@@ -52,41 +56,94 @@ def calc_transition_cost(json_data, key1, key2, accumulated_offset):
 
     return cost
 
-def synthesiser_as_bvh(json_data, motion_name_seq):
-    num = len(motion_name_seq)
+def synthesiser_as_bvh(json_data, motion_name_seq, save_file, transition_time = 0.2):
+    FrameTime = 0.01666667
+    transition_frames = round(transition_time / FrameTime)
+    pre_frame_num = int((transition_frames + 1) / 2)
+    cur_frame_num = int(transition_frames - pre_frame_num)
+    pre_t = []
+    cur_t = []
+    for i in range(pre_frame_num):
+        pre_t.append(0.5 * (i+1) / pre_frame_num)
+    for i in range(cur_frame_num):
+        cur_t.append(0.5 - 0.5 * i / cur_frame_num)
+
     final_positions = []
     final_rotations = []
     accumulated_offset = np.array([0.0, 0.0, 0.0])
-    for i in range(num):
-        motion_name = motion_name_seq[i]
+    total_frames = 0
+
+    num = len(motion_name_seq)
+    for seq_index in range(num):
+        motion_name = motion_name_seq[seq_index]
         motion_data = json_data[motion_name]
         filename = os.path.join(FLAGS.motion_data_path, motion_name)
         """
         positions: (帧数, 3)，np.array，各帧根骨骼的位移（单位是米）
         rotations: (帧数, 24, 3)，np.array，各帧各骨骼节点的欧拉角（单位是角度）
         """
-        _, _, _, positions, rotations, _ = bvh_loader.load_bvh_motion(filename, FLAGS.scaled)
-        # 先调整根骨骼位置，把动作移到原点
-        root_adjust = np.array([positions[0,0], 0.0, positions[0,2]]) # Y保持不变
-        positions -= root_adjust
-        if i != 0:
-            # 移动到上一个动作的结束位置
-            positions += accumulated_offset
-            # 对上个动作的末尾几帧和当前动作的开头几帧，做插值
-            pre_rotation = final_rotations[-1]
-            pre_qs = Quaternions.from_euler(np.radians(pre_rotation), world=False).qs
+        _, _, offsets, positions, rotations, _ = bvh_loader.load_bvh_motion(filename, FLAGS.scaled)
 
-            cur_qs = Quaternions.from_euler(np.radians(rotations), world=False).qs
-            cur_qs = torch.tensor(cur_qs, dtype=torch.float)
+        # 调整根骨骼位置，把动作移到原点
+        root_adjust = np.array([-positions[0, 0], 0.0, -positions[0, 2]]) # Y保持不变
+        root_adjust += offsets[0,]
+        positions += root_adjust
 
-            cur_rotations2 = quat2euler(cur_qs)
-            cur_rotations2 = cur_rotations2.numpy()
-            dif = cur_rotations2 - rotations
+        if seq_index != num - 1:
+            positions = positions[0:-1,] #舍弃最后一帧
 
-        accumulated_offset += motion_data['root_offset']
-        final_positions.append(positions)
-        final_rotations.append(rotations)
-    return
+        if seq_index == 0:
+            final_positions.append(positions)
+            final_rotations.append(rotations)
+            accumulated_offset += motion_data['root_offset'] # 注意：这个单位是厘米！！因为'root_offset'是厘米
+            total_frames += positions.shape[0]
+        else:
+            """
+            对上个动作的末尾几帧和当前动作的开头几帧，做插值
+            如果fps=60，那么2秒的动作共121帧数据，2个2秒的动作合并后应该是241帧，而不是242帧，省略上一动作的最后一帧
+            P P P P P P P P P P
+                              C C C C C C C C C C
+            """
+            # 根骨骼位置的插值：只需要移动到上一个动作的结束位置
+            positions += accumulated_offset / 100.0
+
+            # 旋转插值
+            pre_rotations = final_rotations.pop()
+            pre_last_rotation = pre_rotations[-1,]
+            pre_rotations = pre_rotations[0:-1,] #舍弃最后一帧
+            pre_last_quat = Quaternions.from_euler(np.radians(pre_last_rotation), world=False)
+
+            cur_first_rotation = rotations[0,]
+            cur_first_quat = Quaternions.from_euler(np.radians(cur_first_rotation), world=False)
+
+            for i in range(pre_frame_num):
+                pre_quat = Quaternions.from_euler(np.radians(pre_rotations[-pre_frame_num+i]), world=False)
+                slerp_quat = Quaternions.slerp(pre_quat, cur_first_quat, pre_t[i])
+                slerp_euler = np.degrees(slerp_quat.euler())
+                pre_rotations[-pre_frame_num + i] = slerp_euler
+            for i in range(cur_frame_num):
+                cur_quat = Quaternions.from_euler(np.radians(rotations[i]), world=False)
+                slerp_quat = Quaternions.slerp(cur_quat, pre_last_quat, cur_t[i])
+                slerp_euler = np.degrees(slerp_quat.euler())
+                rotations[i] = slerp_euler
+
+            final_positions.append(positions)
+            final_rotations.append(pre_rotations)
+            final_rotations.append(rotations)
+            accumulated_offset += motion_data['root_offset']
+            total_frames += positions.shape[0]
+
+    merged_positions = np.zeros([total_frames,3])
+    merged_rotations = np.zeros([total_frames,24, 3])
+    start = 0
+    for i in range(num):
+        frames = final_positions[i].shape[0]
+        assert final_rotations[i].shape[0] == frames
+        end = start + frames
+        merged_positions[start:end] = final_positions[i]
+        merged_rotations[start:end] = final_rotations[i]
+        start = end
+    smpl_bvh_writer.save_motion_as_bvh(save_file, merged_positions, merged_rotations, FrameTime, scale100=FLAGS.save_scaled)
 
 
 def main(_):
@@ -149,7 +206,8 @@ def main(_):
     for i in range(len(motion_seq)):
         motion_name_seq.append(motion_names[motion_seq[i]])
 
-    synthesiser_as_bvh(json_data, motion_name_seq)
+    save_file = os.path.join(FLAGS.save_path, '%s.bvh' % FLAGS.save_name)
+    synthesiser_as_bvh(json_data, motion_name_seq, save_file)
 
 if __name__ == '__main__':
     app.run(main)
