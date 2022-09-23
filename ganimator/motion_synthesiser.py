@@ -16,6 +16,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('motion_data_path', '../data/bvh_scale_split/', 'motion data path')
 flags.DEFINE_boolean('scaled', True, '动作是否已经放大了100倍')
 flags.DEFINE_string('motion_json_path', '../data/bvh_scale_split/', 'motion data for synthesis')
+flags.DEFINE_string('start_motion', 'gBR_sBM_cAll_d04_mBR2_ch06_0.bvh', '指定一个起始动作名')
 flags.DEFINE_integer('target_number', 30, 'target motion segment number')
 
 flags.DEFINE_string('save_path', './', '保存目录')
@@ -56,7 +57,7 @@ def calc_transition_cost(json_data, key1, key2, accumulated_offset):
 
     return cost
 
-def synthesiser_as_bvh(json_data, motion_name_seq, save_file, transition_time = 0.2):
+def synthesiser_as_bvh(motion_name_seq, save_file, transition_time = 0.2):
     print(motion_name_seq)
     FrameTime = 0.01666667
     transition_frames = round(transition_time / FrameTime)
@@ -77,7 +78,6 @@ def synthesiser_as_bvh(json_data, motion_name_seq, save_file, transition_time = 
     num = len(motion_name_seq)
     for seq_index in range(num):
         motion_name = motion_name_seq[seq_index]
-        motion_data = json_data[motion_name]
         filename = os.path.join(FLAGS.motion_data_path, motion_name)
         """
         positions: (帧数, 3)，np.array，各帧根骨骼的位移（单位是米）
@@ -148,8 +148,10 @@ def synthesiser_as_bvh(json_data, motion_name_seq, save_file, transition_time = 
 def main(_):
     json_data = load_motion_config()
     motion_names = []
-    for _, name in enumerate(json_data):
+    name2index = {}
+    for index, name in enumerate(json_data):
         motion_names.append(name)
+        name2index[name] = index
     motion_num = len(motion_names)
 
     """ test
@@ -169,7 +171,10 @@ def main(_):
         if length >= FLAGS.target_number:
             break
         if length == 0:
-            index = random.randrange(0, motion_num)
+            if len(FLAGS.start_motion) != 0 and FLAGS.start_motion in name2index:
+                index = name2index[FLAGS.start_motion]
+            else:
+                index = random.randrange(0, motion_num)
             motion_seq.append(index)
             accumulated_offset += np.array(json_data[motion_names[index]]['root_offset'])
         else:
@@ -177,9 +182,12 @@ def main(_):
             cur_index = -1
             cur_cost = 999.0
 
-            for i in range(100): # 直接生成100个不重复的 random.sample(range(0, motion_num), 100)
+            for i in range(50): # 直接生成100个不重复的 random.sample(range(0, motion_num), 100)
                 index = random.randrange(0, motion_num)
                 if index in motion_seq or index == cur_index:
+                    continue
+                motion_name = motion_names[index]
+                if motion_name.find('_0.bvh') != -1: # 每个动作的第一个太慢了
                     continue
                 cost = calc_transition_cost(json_data, motion_names[pre_index], motion_names[index], accumulated_offset)
                 if cost >= cur_cost:
@@ -206,7 +214,7 @@ def main(_):
         motion_name_seq.append(motion_names[motion_seq[i]])
 
     save_file = os.path.join(FLAGS.save_path, '%s.bvh' % FLAGS.save_name)
-    synthesiser_as_bvh(json_data, motion_name_seq, save_file)
+    synthesiser_as_bvh(motion_name_seq, save_file)
 
 if __name__ == '__main__':
     app.run(main)
