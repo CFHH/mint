@@ -147,6 +147,7 @@ def main(_):
     smpl_model = SMPL(model_path="../others/smpl/", gender='MALE', batch_size=1)
     filename = os.path.join(FLAGS.bvh_path, '%s.bvh' % FLAGS.bvh_file)
     positions, rotations, frametime = load_bvh_motion(filename)
+    rotations = rotations[:, :, [0, 2, 1]] #TODO 忘了为什么加这个了
     visualize(smpl_model, positions, rotations, frametime, bpm=FLAGS.bpm)
 
 if __name__ == '__main__':
