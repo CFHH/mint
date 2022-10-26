@@ -16,6 +16,7 @@ from tools.Quaternions import Quaternions
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('motion_data_path', '../data/bvh_scale/', 'motion data path')
+flags.DEFINE_string('music_data_file', '../data/bvh_scale_split/music_feature.dat', 'music feature file')
 flags.DEFINE_boolean('scaled', True, '动作是否已经放大了100倍')
 flags.DEFINE_string('save_path', '../data/velocity/', 'velocity and angular_velocity')
 
@@ -26,7 +27,7 @@ def joint_position(fk, root_positions, rotations):
     all_positions = fk.forward(rotations, root_positions) # 计算各骨骼节点的世界坐标位置(frame, 24, 3)
     return all_positions.numpy()
 
-def process(filename):
+def process(filename, music_data):
     """
     names         : (24,)，各骨骼节点的名字，24按bvh中出场次序（下同）
     parents       : (24,)，各骨骼节点的父节点索引
@@ -77,24 +78,47 @@ def process(filename):
     angular_velocity = np.concatenate([first_bone, angular_velocity], axis=1)  # (帧数,24)
 
     """
-    合并一下，输出到文件
+    音乐数据
     """
-    final_data = np.concatenate([velocity, angular_velocity], axis=1) # (帧数,48)
-
     motion_name = os.path.basename(filename)
     motion_name = motion_name.split('.')[0]
+    music_feature = music_data[motion_name]
+    strength = np.array(music_feature['strength'], dtype=np.float32)
+    peak_idx = music_feature['peak_idx']
+    beat_idx = music_feature['beat_idx']
+    peak_onehot = np.zeros_like(strength, dtype=np.float32)
+    peak_onehot[peak_idx] = 1.0
+    beat_onehot = np.zeros_like(strength, dtype=np.float32)
+    beat_onehot[beat_idx] = 1.0
+
+    strength = strength[:, np.newaxis]
+    peak_onehot = peak_onehot[:, np.newaxis]
+    beat_onehot = beat_onehot[:, np.newaxis]
+    music_feature = np.concatenate([strength, peak_onehot, beat_onehot], axis=-1) # (帧数,3)
+
+    """
+    合并一下，输出到文件
+    """
+    final_data = np.concatenate([velocity, angular_velocity, music_feature], axis=-1) # (帧数, 24+24+3)
+
     save_file = os.path.join(FLAGS.save_path, "%s.np" % motion_name)
     np.save(save_file, final_data)
     return
 
 def main(_):
+    music_data = None
+    if os.path.isfile(FLAGS.music_data_file):
+        with open(FLAGS.music_data_file, 'r') as f:
+            json_str = f.read()
+            music_data = json.loads(json_str)
+
     # 调试用
-    #process("../data/bvh_scale/gWA_sFM_cAll_d25_mWA4_ch05.bvh")
+    #process("../data/bvh_scale/gWA_sFM_cAll_d25_mWA4_ch05.bvh", music_data)
 
     motion_files = glob.glob(os.path.join(FLAGS.motion_data_path, "*.bvh"))
     for file in tqdm.tqdm(motion_files):
         print("Process %s" % file)
-        process(file)
+        process(file, music_data)
     return
 
 if __name__ == '__main__':
