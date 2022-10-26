@@ -11,6 +11,7 @@ import librosa
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('music_dir', 'D:/mint-music/', 'Path to the AIST wav files.')
+flags.DEFINE_string('video_dir', 'D:/mint-video/', 'Path to the AIST mp4 files.')
 
 def get_bpm(audio_name):
     """Get tempo (BPM) for a music by parsing music name."""
@@ -28,8 +29,10 @@ def get_music_feature(file_name):
     SR = FPS * HOP_LENGTH
     EPS = 1e-6
 
-    audio_name = os.path.basename(file_name)
-    audio_name = audio_name.split('.')[0]
+    motion_name = os.path.basename(file_name)
+    motion_name = motion_name.split('.')[0]
+    motion_name = motion_name.replace('_c01_', '_cAll_')
+    audio_name = motion_name.split("_")[4]
 
     # _ = SR = 60 * 512，len(data) / _ = 秒数
     data, _ = librosa.load(file_name, sr=SR)
@@ -63,7 +66,7 @@ def get_music_feature(file_name):
     """
     #audio_feature = np.concatenate([envelope[:, None], peak_onehot[:, None], beat_onehot[:, None]], axis=-1)
     audio_feature = {
-        'name': audio_name,
+        'name': motion_name,
         'frames': envelope.shape[0],
         'strength': envelope.tolist(),
         'peak_idx': peak_idxs.tolist(),
@@ -76,14 +79,14 @@ def get_music_feature(file_name):
 def main(_):
     json_data = {}
 
-    music_files = glob.glob(os.path.join(FLAGS.music_dir, "*.wav"))
+    music_files = glob.glob(os.path.join(FLAGS.video_dir, "*_*_c01_*_*_*.mp4"))
     for file_name in tqdm.tqdm(music_files):
         print("Process %s" % file_name)
         audio_feature = get_music_feature(file_name)
         json_data[audio_feature['name']] = audio_feature
 
     json_str = json.dumps(json_data)
-    json_file = os.path.join(FLAGS.music_dir, "music_feature.dat")
+    json_file = os.path.join(FLAGS.video_dir, "music_feature.dat")
     with open(json_file, 'w') as f:
         f.write(json_str)
 
