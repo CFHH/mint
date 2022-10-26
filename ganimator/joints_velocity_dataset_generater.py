@@ -99,10 +99,20 @@ def process(filename, music_data):
     """
     合并一下，输出到文件
     """
+    motion_frames = velocity.shape[0]
+    music_frames = music_feature.shape[0]
+    final_frames = min(motion_frames, music_frames)
+    if motion_frames > final_frames:
+        velocity = velocity[0:final_frames,]
+        angular_velocity = angular_velocity[0:final_frames,]
+    else:
+        music_feature = music_feature[0:final_frames,]
+
     final_data = np.concatenate([velocity, angular_velocity, music_feature], axis=-1) # (帧数, 24+24+3)
 
-    save_file = os.path.join(FLAGS.save_path, "%s.np" % motion_name)
+    save_file = os.path.join(FLAGS.save_path, motion_name)
     np.save(save_file, final_data)
+    # 测试加载 data = np.load('../data/velocity/gWA_sFM_cAll_d25_mWA4_ch05.npy')
     return
 
 def main(_):
