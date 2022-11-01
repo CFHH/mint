@@ -47,28 +47,37 @@ def process(filename, music_data):
     positions = joint_position(fk, root_positions, rotations)
 
     """
-    velocity: (帧数,24)，各帧各节点的速度（单位是米/秒）
+    1、velocity: (帧数,24)，各帧各节点的速度（单位是米/秒）
     """
-    velocity = positions[1:, :, :] - positions[:-1, :, :] #(帧数-1,24,3)
-    first_frame = np.zeros_like(positions[0:1:,]) #(1,24,3)
+    velocity = positions[1:, :, :] - positions[:-1, :, :] # (帧数-1,24,3)
+    first_frame = np.zeros_like(positions[0:1,]) #(1,24,3)
     velocity = np.concatenate([first_frame, velocity], axis=0) #(帧数,24,3)
     velocity *= 60.0 # 60fps
-    velocity = np.linalg.norm(velocity, axis=-1) #(帧数,24)
+    acceleration = velocity[1:, :, :] - velocity[:-1, :, :]  # (帧数-1,24,3)，算出一帧内的加速度向量
+    velocity = np.linalg.norm(velocity, axis=-1) # (帧数,24)
 
     """
-    frame_offsets: (帧数,23,3)，各帧各节点(除根节点)相对于父节点的偏移
+    2、acceleration: (帧数,24)，各帧各节点的速度（单位是米/秒平方）
+    """
+    first_frame = np.zeros_like(positions[0:1, ])  # (1,24,3)
+    acceleration = np.concatenate([first_frame, acceleration], axis=0)  # (帧数,24,3)
+    acceleration *= 60.0  # 60fps
+    acceleration = np.linalg.norm(acceleration, axis=-1)  # (帧数,24)
+
+    """
+    frame_offsets: (帧数,23,3)，各帧各节点(除根节点，所以1:)相对于父节点的偏移
     bone_length: (23,)，各节点(除根节点)距离父节点的长度
     """
-    frame_offsets = positions[:, 1:, :] - positions[:, parents[1:], :]
+    frame_offsets = positions[:, 1:, :] - positions[:, parents[1:], :] # (帧数,23,3)
 
     bone_length = smpl_bvh_writer.SMPL_JOINTS_OFFSETS[smpl_bvh_writer.ROTATION_SEQ]
     bone_length = bone_length[1:, :] - bone_length[parents[1:], :]
     bone_length = np.linalg.norm(bone_length, axis=-1)
 
     """
-    angular_velocity: (帧数,24)，各帧各节点的角速度（单位是弧度/秒）
+    3、angular_velocity: (帧数,24)，各帧各节点的角速度标量（单位是弧度/秒）
     """
-    angular_velocity = frame_offsets[1:, :, :] - frame_offsets[:-1, :, :] #(帧数-1,23,3)
+    angular_velocity = frame_offsets[1:, :, :] - frame_offsets[:-1, :, :] # (帧数-1,23,3)
     first_frame = np.zeros_like(frame_offsets[0:1:, ])  # (1,23,3)
     angular_velocity = np.concatenate([first_frame, angular_velocity], axis=0)  # (帧数,23,3)
     angular_velocity = np.linalg.norm(angular_velocity, axis=-1) # (帧数,23)
@@ -78,7 +87,66 @@ def process(filename, music_data):
     angular_velocity = np.concatenate([first_bone, angular_velocity], axis=1)  # (帧数,24)
 
     """
-    音乐数据
+    omega: (帧数,24,3)，各帧各节点的物理含义的角速度矢量
+    """
+    omega = np.cross(frame_offsets[:-1, :, :], frame_offsets[1:, :, :]) # (帧数-1,23,3)，没有第一帧和根节点
+    omega_norm = np.linalg.norm(omega, axis=-1) #(帧数-1,23)
+    length_adjust = angular_velocity[1:, 1:] / omega_norm
+    length_adjust = length_adjust[:, :, np.newaxis]
+    omega = omega * length_adjust # (帧数-1,23,3)
+    #temp = np.linalg.norm(omega, axis=-1)
+    #temp = temp - angular_velocity[1:,1:] # 验证temp是0
+    first_frame = np.zeros_like(omega[0:1:, ])  # (1,23,3)
+    omega = np.concatenate([first_frame, omega], axis=0)  # (帧数,23,3)
+    first_bone = np.zeros_like(omega[:, 0:1, :])  # (帧数, 1, 3)
+    omega = np.concatenate([first_bone, omega], axis=1)  # (帧数,24,3)
+
+    """
+    4、angular_acceleration: (帧数,24)，各帧各节点的角速度（单位是弧度/秒平方）
+    """
+    angular_acceleration = omega[1:, :, :] - omega[:-1, :, :]  # (帧数-1,24,3)，算出一帧内的角加速度向量
+    first_frame = np.zeros_like(angular_acceleration[0:1, ])  # (1,24,3)
+    angular_acceleration = np.concatenate([first_frame, angular_acceleration], axis=0)  # (帧数,24,3)
+    angular_acceleration *= 60.0  # 60fps
+    angular_acceleration = np.linalg.norm(angular_acceleration, axis=-1)  # (帧数,24)
+
+    """
+    附加每帧的最大值
+    """
+    idxs = [0, 2, 3, 6, 7, 13, 16, 17, 21, 22]
+    #每帧速度的最大值
+    max_v = np.amax(velocity[:, idxs], axis=1) # (帧数,)
+    max_v = max_v[:, np.newaxis] # (帧数,1)
+    min_v = np.amin(velocity[:, idxs], axis=1)  # (帧数,)
+    min_v = min_v[:, np.newaxis]  # (帧数,1)
+    velocity = np.concatenate([velocity, max_v, min_v], axis=1) # (帧数,24+1)
+
+    #每帧加速度的最大值
+    max_a = np.amax(acceleration[:, idxs], axis=1)  # (帧数,)
+    max_a = max_a[:, np.newaxis]  # (帧数,1)
+    min_a = np.amin(acceleration[:, idxs], axis=1)  # (帧数,)
+    min_a = min_a[:, np.newaxis]  # (帧数,1)
+    acceleration = np.concatenate([acceleration, max_a, min_a], axis=1) # (帧数,24+1)
+
+    idxs = [2, 3, 6, 7, 13, 16, 17, 21, 22]
+
+    # 每帧角速度的最大值
+    max_av = np.amax(angular_velocity[:, idxs], axis=1)  # (帧数,)
+    max_av = max_av[:, np.newaxis]  # (帧数,1)
+    min_av = np.amin(angular_velocity[:, idxs], axis=1)  # (帧数,)
+    min_av = min_av[:, np.newaxis]  # (帧数,1)
+    angular_velocity = np.concatenate([angular_velocity, max_av, min_av], axis=1)  # (帧数,24+1)
+
+    # 每帧角加速度的最大值
+    max_aa = np.amax(angular_acceleration[:, idxs], axis=1)  # (帧数,)
+    max_aa = max_aa[:, np.newaxis]  # (帧数,1)
+    min_aa = np.amin(angular_acceleration[:, idxs], axis=1)  # (帧数,)
+    min_aa = min_aa[:, np.newaxis]  # (帧数,1)
+    angular_acceleration = np.concatenate([angular_acceleration, max_aa, min_aa], axis=1)  # (帧数,24+1)
+
+
+    """
+    5、音乐数据
     """
     motion_name = os.path.basename(filename)
     motion_name = motion_name.split('.')[0]
@@ -104,11 +172,16 @@ def process(filename, music_data):
     final_frames = min(motion_frames, music_frames)
     if motion_frames > final_frames:
         velocity = velocity[0:final_frames,]
+        acceleration = acceleration[0:final_frames,]
         angular_velocity = angular_velocity[0:final_frames,]
+        angular_acceleration = angular_acceleration[0:final_frames,]
     else:
         music_feature = music_feature[0:final_frames,]
 
-    final_data = np.concatenate([velocity, angular_velocity, music_feature], axis=-1) # (帧数, 24+24+3)
+    """
+    最终是(帧数, 25+25+25+25+3)，顺序是速度25 + 加速度25 + 角速度25 + 角加速度25 + 音乐3
+    """
+    final_data = np.concatenate([velocity, acceleration, angular_velocity, angular_acceleration, music_feature], axis=-1)
 
     save_file = os.path.join(FLAGS.save_path, motion_name)
     np.save(save_file, final_data)
