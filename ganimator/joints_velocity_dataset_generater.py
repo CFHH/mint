@@ -47,14 +47,22 @@ def process(filename, music_data):
     positions = joint_position(fk, root_positions, rotations)
 
     """
-    1、velocity: (帧数,24)，各帧各节点的速度（单位是米/秒）
+    1、velocity: (帧数,24)，各帧各节点的绝对速度（单位是米/秒）
     """
     velocity = positions[1:, :, :] - positions[:-1, :, :] # (帧数-1,24,3)
     first_frame = np.zeros_like(positions[0:1,]) #(1,24,3)
     velocity = np.concatenate([first_frame, velocity], axis=0) #(帧数,24,3)
     velocity *= 60.0 # 60fps
+    relative_velocity = velocity[:, 1:, :] - velocity[:, parents[1:], :] # (帧数,23,3)
+    root_velocity = velocity[:, 0:1, :].copy()# (帧数,1,3)
     acceleration = velocity[1:, :, :] - velocity[:-1, :, :]  # (帧数-1,24,3)，算出一帧内的加速度向量
     velocity = np.linalg.norm(velocity, axis=-1) # (帧数,24)
+
+    """
+    1、relative_velocity: (帧数,24)，各帧各节点的相对速度（单位是米/秒）
+    """
+    relative_velocity = np.concatenate([root_velocity, relative_velocity], axis=1) #(帧数,24,3)
+    relative_velocity = np.linalg.norm(relative_velocity, axis=-1)  # (帧数,24)
 
     """
     2、acceleration: (帧数,24)，各帧各节点的速度（单位是米/秒平方）
@@ -113,34 +121,46 @@ def process(filename, music_data):
     """
     附加每帧的最大值、最小值
     """
-    idxs = [0, 2, 3, 6, 7, 13, 16, 17, 21, 22]
+    """
+    main_nodes = [0, 2, 3, 6, 7, 13, 16, 17, 21, 22]
     #每帧速度的最大值
-    max_v = np.amax(velocity[:, idxs], axis=1) # (帧数,)
+    max_v = np.amax(velocity[:, main_nodes], axis=1) # (帧数,)
+
+    frames = max_v.shape[0]
+    max_idx = np.zeros(frames, dtype=int)
+    for i in range(max_v.shape[0]):
+        if i == 0:
+            continue
+        vec = velocity[i,:]
+        tup = np.where(vec == np.max(vec))
+        max_idx[i] = tup[0]
+
+
     max_v = max_v[:, np.newaxis] # (帧数,1)
-    min_v = np.average(velocity[:, idxs], axis=1)  # (帧数,)
+    min_v = np.average(velocity[:, main_nodes], axis=1)  # (帧数,)
     min_v = min_v[:, np.newaxis]  # (帧数,1)
     velocity = np.concatenate([velocity, max_v, min_v], axis=1) # (帧数,24+2)
 
     #每帧加速度的最大值
-    max_a = np.amax(acceleration[:, idxs], axis=1)  # (帧数,)
+    max_a = np.amax(acceleration[:, main_nodes], axis=1)  # (帧数,)
     max_a = max_a[:, np.newaxis]  # (帧数,1)
-    min_a = np.average(acceleration[:, idxs], axis=1)  # (帧数,)
+    min_a = np.average(acceleration[:, main_nodes], axis=1)  # (帧数,)
     min_a = min_a[:, np.newaxis]  # (帧数,1)
     acceleration = np.concatenate([acceleration, max_a, min_a], axis=1) # (帧数,24+2)
 
     idxs = [2, 3, 6, 7, 13, 16, 17, 21, 22]
 
     # 每帧角速度的最大值
-    max_av = np.amax(angular_velocity[:, idxs], axis=1)  # (帧数,)
+    max_av = np.amax(angular_velocity[:, main_nodes], axis=1)  # (帧数,)
     max_av = max_av[:, np.newaxis]  # (帧数,1)
-    min_av = np.average(angular_velocity[:, idxs], axis=1)  # (帧数,)
+    min_av = np.average(angular_velocity[:, main_nodes], axis=1)  # (帧数,)
     min_av = min_av[:, np.newaxis]  # (帧数,1)
     angular_velocity = np.concatenate([angular_velocity, max_av, min_av], axis=1)  # (帧数,24+2)
 
     # 每帧角加速度的最大值
-    max_aa = np.amax(angular_acceleration[:, idxs], axis=1)  # (帧数,)
+    max_aa = np.amax(angular_acceleration[:, main_nodes], axis=1)  # (帧数,)
     max_aa = max_aa[:, np.newaxis]  # (帧数,1)
-    min_aa = np.average(angular_acceleration[:, idxs], axis=1)  # (帧数,)
+    min_aa = np.average(angular_acceleration[:, main_nodes], axis=1)  # (帧数,)
     min_aa = min_aa[:, np.newaxis]  # (帧数,1)
     angular_acceleration = np.concatenate([angular_acceleration, max_aa, min_aa], axis=1)  # (帧数,24+2)
 
@@ -151,6 +171,7 @@ def process(filename, music_data):
     sum_offsets = np.sum(sum_offsets, axis = 2) # (帧数,24)
     sum_offsets = np.sum(sum_offsets, axis = 1) # (帧数,)
     sum_offsets = sum_offsets[:, np.newaxis]  # (帧数,1)
+    """
 
 
     """
@@ -180,17 +201,18 @@ def process(filename, music_data):
     final_frames = min(motion_frames, music_frames)
     if motion_frames > final_frames:
         velocity = velocity[0:final_frames,]
+        relative_velocity = relative_velocity[0:final_frames,]
         acceleration = acceleration[0:final_frames,]
         angular_velocity = angular_velocity[0:final_frames,]
         angular_acceleration = angular_acceleration[0:final_frames,]
-        sum_offsets = sum_offsets[0:final_frames,]
+        #sum_offsets = sum_offsets[0:final_frames,]
     else:
         music_feature = music_feature[0:final_frames,]
 
     """
-    最终是(帧数, 26*4+3+1)，顺序是速度26 + 加速度26 + 角速度26 + 角加速度26 + 音乐3 + 偏移绝对值和1
+    最终是(帧数, 24*5+3)，顺序是绝对速度24 + 相对速度24 + 加速度24 + 角速度24 + 角加速度24 + 音乐3
     """
-    final_data = np.concatenate([velocity, acceleration, angular_velocity, angular_acceleration, music_feature, sum_offsets], axis=-1)
+    final_data = np.concatenate([velocity, relative_velocity, acceleration, angular_velocity, angular_acceleration, music_feature], axis=-1)
 
     save_file = os.path.join(FLAGS.save_path, motion_name)
     np.save(save_file, final_data)
